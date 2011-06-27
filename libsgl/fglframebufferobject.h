@@ -7,6 +7,10 @@
 #include <GLES/gl.h>
 #include <GLES/glext.h>
 
+#define FGL_COLOR0_ATTACHABLE  (1<<0)
+#define FGL_DEPTH_ATTACHABLE   (1<<1)
+#define FGL_STENCIL_ATTACHABLE (1<<2)
+
 struct FGLRenderbuffer
 {
 	/* Memory surface */
@@ -15,11 +19,10 @@ struct FGLRenderbuffer
 	GLint		width;
 	GLint		height;
 	GLenum		format;
+	unsigned	attachment;
 	/* HW state */
 	uint32_t	fglFormat;
 	uint32_t	bpp;
-	bool		convert;
-	bool		valid;
 	bool		swap;
 
 	FGLRenderbuffer()
@@ -39,11 +42,10 @@ struct FGLFramebuffer
 	GLenum status;
 
 	struct Attach {
-		enum AttachType {NONE, RENDERBUFFER, TEXTURE};
 		unsigned int name;
-		unsigned int type;
+		GLenum type;
 
-		Attach() : name(0), type(NONE) {}
+		Attach() : name(0), type(0) {}
 	};
 
 	Attach colorAttach;

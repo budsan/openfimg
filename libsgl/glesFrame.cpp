@@ -100,44 +100,49 @@ GL_API void GL_APIENTRY glGenRenderbuffersOES (GLsizei n, GLuint* renderbuffers)
 	} while (--i);
 }
 
-static int fglGetRenderbufferFormatInfo(GLenum format, unsigned *bpp, bool *conv, bool *swap)
-{
-	//TODO FORMATS:
-	//DEPTH_COMPONENT16_OES
-
-	//OPTIONAL FORMATS:
-	//STENCIL_INDEX1_OES
-	//STENCIL_INDEX4_OES
-	//STENCIL_INDEX8_OES
-	//DEPTH_COMPONENT24_OES
-	//DEPTH_COMPONENT32_OES
-	//STENCIL_INDEX1_OES
-	//STENCIL_INDEX4_OES
-	//STENCIL_INDEX8_OES
-
-	*conv = 0;
+static int fglGetRenderbufferFormatInfo(GLenum format, unsigned *bpp, GLenum *attachment, bool *swap)
+{	
+	*attachment = 0;
 	*swap = 0;
-	switch (format) {
-		case GL_RGBA4_OES:
-			*bpp = 2;
-			return FGTU_TSTA_TEXTURE_FORMAT_4444;
-		case GL_RGB5_A1_OES:
-			*bpp = 2;
-			return FGTU_TSTA_TEXTURE_FORMAT_1555;
-		case GL_RGB565_OES:
-			*bpp = 2;
-			return FGTU_TSTA_TEXTURE_FORMAT_565;
-		case GL_RGBA8_OES:// Needs swapping in pixel shader
-			*swap = 1;
-			*bpp = 4;
-			return FGTU_TSTA_TEXTURE_FORMAT_8888;
-		case GL_RGB8_OES: // Needs conversion
-			*conv = 1;
-			*bpp = 4;
-			return FGTU_TSTA_TEXTURE_FORMAT_8888;
-		default:
-			return -1;
 
+	switch (format) {
+	case GL_RGBA4_OES: //REQUIRED
+		*bpp = 2;
+		*attachment = FGL_COLOR0_ATTACHABLE;
+		return -1;
+	case GL_RGB5_A1_OES: //REQUIRED
+		*bpp = 2;
+		*attachment = FGL_COLOR0_ATTACHABLE;
+		return FGPF_COLOR_MODE_565;
+	case GL_RGB565_OES: //REQUIRED
+		*bpp = 2;
+		*attachment = FGL_COLOR0_ATTACHABLE;
+		return -1;
+	case GL_RGBA8_OES:// OPTIONAL - Needs swapping in pixel shader
+		*bpp = 4;
+		*swap = 1;
+		*attachment = FGL_COLOR0_ATTACHABLE;
+		return FGPF_COLOR_MODE_8888;
+	case GL_RGB8_OES: // OPTIONAL - Needs swapping in pixel shader
+		*bpp = 4;
+		*swap = 1;
+		*attachment = FGL_COLOR0_ATTACHABLE;
+		return FGPF_COLOR_MODE_0888;
+	case GL_DEPTH_COMPONENT16_OES: //REQUIRED
+	case GL_DEPTH_COMPONENT24_OES: //OPTIONAL
+	case GL_DEPTH_COMPONENT32_OES: //OPTIONAL
+		*attachment = FGL_DEPTH_ATTACHABLE;
+	case GL_STENCIL_INDEX1_OES: //OPTIONAL
+	case GL_STENCIL_INDEX4_OES: //OPTIONAL
+	case GL_STENCIL_INDEX8_OES: //OPTIONAL
+		*attachment = FGL_STENCIL_ATTACHABLE;
+		return -1;
+	case GL_DEPTH_STENCIL_OES: //OES_packed_depth_stencil
+		*bpp = 4;
+		*attachment = FGL_STENCIL_ATTACHABLE | FGL_DEPTH_ATTACHABLE;
+		return (8 << 8) | 24;
+	default:
+		return -1;
 	}
 }
 
@@ -148,8 +153,10 @@ GL_API void GL_APIENTRY glRenderbufferStorageOES (GLenum target, GLenum internal
 		return;
 	}
 
-	// TODO:
-	// CHECK width & height greater than MAX_RENDERBUFFER_SIZE_EXT -> error INVALID_VALUE
+	if (width > FGL_MAX_TEXTURE_SIZE || height > FGL_MAX_TEXTURE_SIZE) {
+		setError(GL_INVALID_OPERATION);
+		return;
+	}
 
 	FGLContext *ctx = getContext();
 
@@ -161,9 +168,9 @@ GL_API void GL_APIENTRY glRenderbufferStorageOES (GLenum target, GLenum internal
 	FGLRenderbuffer *obj = ctx->renderbuffer.get();
 
 	unsigned bpp;
-	bool convert;
+	GLenum attachment;
 	bool swap;
-	int fglFormat = fglGetRenderbufferFormatInfo(internalformat, &bpp, &convert, &swap);
+	int fglFormat = fglGetRenderbufferFormatInfo(internalformat, &bpp, &attachment, &swap);
 	if (fglFormat < 0) {
 		setError(GL_INVALID_VALUE);
 		return;
@@ -175,9 +182,8 @@ GL_API void GL_APIENTRY glRenderbufferStorageOES (GLenum target, GLenum internal
 		obj->format = internalformat;
 		obj->fglFormat = fglFormat;
 		obj->bpp = bpp;
-		obj->convert = convert;
+		obj->attachment = attachment;
 		obj->swap = swap;
-
 		unsigned size = width * height * bpp;
 
 		// Setup surface
