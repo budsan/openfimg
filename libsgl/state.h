@@ -30,6 +30,7 @@
 #include "types.h"
 #include "libfimg/fimg.h"
 
+#include "fglframebufferobject.h"
 #include "fglsurface.h"
 #include "fglstack.h"
 #include "fglmatrix.h"
@@ -171,6 +172,14 @@ struct FGLTextureState {
 	}
 };
 
+struct FGLFramebufferState {
+	FGLFramebuffer window;
+	FGLFramebufferObjectBinding framebuffer;
+
+	FGLFramebufferState() :
+		window() , framebuffer() {}
+};
+
 struct FGLScissorState {
 	GLint left;
 	GLint bottom;
@@ -228,6 +237,8 @@ struct FGLContext {
 	FGLuint packAlignment;
 	FGLBufferObjectBinding arrayBuffer;
 	FGLBufferObjectBinding elementArrayBuffer;
+	FGLRenderBufferObjectBinding renderbuffer;
+	FGLFramebufferState framebuffer;
 	FGLViewportState viewport;
 	FGLPerFragmentState perFragment;
 	FGLClearState clear;

@@ -21,8 +21,8 @@ LOCAL_ARM_MODE := arm
 
 LOCAL_SRC_FILES:= \
 	eglBase.cpp eglMem.cpp \
-	glesBase.cpp glesGet.cpp glesMatrix.cpp glesPixel.cpp glesTex.cpp \
-	fglmatrix.cpp
+	glesBase.cpp glesFrame.cpp glesGet.cpp glesMatrix.cpp \
+	glesPixel.cpp glesTex.cpp fglmatrix.cpp
 
 LOCAL_CFLAGS += -DLOG_TAG=\"libsgl\"
 LOCAL_CFLAGS += -DGL_GLEXT_PROTOTYPES -DEGL_EGLEXT_PROTOTYPES

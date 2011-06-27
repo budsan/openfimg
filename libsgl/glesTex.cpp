@@ -63,6 +63,9 @@ GL_API void GL_APIENTRY glGenTextures (GLsizei n, GLuint *textures)
 
 GL_API void GL_APIENTRY glDeleteTextures (GLsizei n, const GLuint *textures)
 {
+	//TODO:
+	//if a texture is attached to a framebuffer, framebuffer will attach texture id 0
+
 	unsigned name;
 
 	if(n <= 0)
