@@ -13,14 +13,12 @@
 
 struct FGLRenderbuffer
 {
-	/* Memory surface */
 	FGLSurface	*surface;
-	/* GL state */
 	GLint		width;
 	GLint		height;
 	GLenum		format;
+
 	unsigned	attachment;
-	/* HW state */
 	uint32_t	fglFormat;
 	uint32_t	bpp;
 	bool		swap;
@@ -41,20 +39,30 @@ struct FGLFramebuffer
 {
 	GLenum status;
 
-	struct Attach {
-		unsigned int name;
-		GLenum type;
+	unsigned colorAttach;
+	unsigned depthAttach;
+	unsigned stencilAttach;
 
-		Attach() : name(0), type(0) {}
-	};
+	GLenum colorType; //ZERO, TEXTURE, RENDERBUFFER
+	GLenum depthType;
+	GLenum stencilType;
 
-	Attach colorAttach;
-	Attach depthAttach;
-	Attach stencilAttach;
+	//------------------//
+
+	FGLSurface *color;
+	FGLSurface *depth;
+
+	unsigned int width;
+	unsigned int height;
+	unsigned int stride;
+	unsigned int format;
+	unsigned int depthFormat;
 
 	FGLFramebuffer()
 		: status(GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT_OES),
-		  colorAttach(), depthAttach(), stencilAttach()
+		  colorAttach(0), depthAttach(0), stencilAttach(0),
+		  colorType(0), depthType(0), stencilType(0),
+		  color(0), depth(0), width(0), stride(0), format(0)
 	{
 
 	}

@@ -14,6 +14,97 @@
 FGLObjectManager<FGLFramebuffer, FGL_MAX_FRAMEBUFFER_OBJECTS> fglFrameBufferObjects;
 FGLObjectManager<FGLRenderbuffer, FGL_MAX_RENDERBUFFER_OBJECTS> fglRenderBufferObjects;
 
+void fglSetColorBufferFBO(FGLContext *gl, FGLFramebuffer *fbo)
+{
+	if (fbo->status != GL_FRAMEBUFFER_COMPLETE_OES || !fbo->color) {
+		//TODO: Disable colorbuffer in some way
+		//Mask colorbuffer for example
+		gl->surface.draw = 0;
+		//gl->surface.width = 0;
+		//gl->surface.stride = 0;
+		//gl->surface.height = 0;
+		//gl->surface.format = fbo->format;
+	}
+	else {
+		//TODO: Check this code works with all formats
+		fimgSetFrameBufSize(gl->fimg, fbo->stride, fbo->height);
+		fimgSetFrameBufParams(gl->fimg, 1, 0, 255, (fimgColorMode)fbo->format);
+		fimgSetColorBufBaseAddr(gl->fimg, cbuf->paddr);
+		gl->surface.draw = fbo->color;
+		gl->surface.width = fbo->width;
+		gl->surface.stride = fbo->stride;
+		gl->surface.height = fbo->height;
+		gl->surface.format = fbo->format;
+	}
+}
+
+void fglSetDepthBufferFBO(FGLContext *gl, FGLFramebuffer *fbo)
+{
+	if (fbo->status != GL_FRAMEBUFFER_COMPLETE_OES || !fbo->depth || !fbo->depthFormat) {
+		//TODO: Disable depth AND stencil buffer in some way
+		//mask depth and stencil
+		gl->surface.depth = 0;
+		gl->surface.depthFormat = 0;
+	}
+	else {
+		//TODO: Disable depth OR stencil buffer
+		//mask depth or stencil depending of depthFormat
+		fimgSetZBufBaseAddr(gl->fimg, zbuf->paddr);
+		gl->surface.depth = fbo->depth;
+		gl->surface.depthFormat = fbo->depthFormat;
+	}
+}
+
+static int fglGetRenderbufferFormatInfo(GLenum format, unsigned *bpp, GLenum *attachment, bool *swap)
+{
+	*attachment = 0;
+	*swap = 0;
+
+	switch (format) {
+	case GL_RGBA4_OES: //REQUIRED
+		//*bpp = 2;
+		//*attachment = FGL_COLOR0_ATTACHABLE;
+		//return -1;
+		*bpp = 4;
+		*swap = 1;
+		*attachment = FGL_COLOR0_ATTACHABLE;
+	case GL_RGB5_A1_OES: //REQUIRED
+		*bpp = 2;
+		*attachment = FGL_COLOR0_ATTACHABLE;
+		return FGPF_COLOR_MODE_565;
+	case GL_RGB565_OES: //REQUIRED
+		*bpp = 2;
+		*attachment = FGL_COLOR0_ATTACHABLE;
+		return FGPF_COLOR_MODE_565;
+	case GL_RGBA8_OES:// OPTIONAL - Needs swapping in pixel shader
+		*bpp = 4;
+		*swap = 1;
+		*attachment = FGL_COLOR0_ATTACHABLE;
+		return FGPF_COLOR_MODE_8888;
+	case GL_RGB8_OES: // OPTIONAL - Needs swapping in pixel shader
+		*bpp = 4;
+		*swap = 1;
+		*attachment = FGL_COLOR0_ATTACHABLE;
+		return FGPF_COLOR_MODE_0888;
+	case GL_DEPTH_COMPONENT16_OES: //REQUIRED
+	case GL_DEPTH_COMPONENT24_OES: //OPTIONAL
+		*attachment = FGL_DEPTH_ATTACHABLE;
+
+	case GL_DEPTH_COMPONENT32_OES: //OPTIONAL
+		return -1;
+	case GL_STENCIL_INDEX1_OES: //OPTIONAL
+	case GL_STENCIL_INDEX4_OES: //OPTIONAL
+	case GL_STENCIL_INDEX8_OES: //OPTIONAL
+		*attachment = FGL_STENCIL_ATTACHABLE;
+		return -1;
+	case GL_DEPTH_STENCIL_OES: //OES_packed_depth_stencil
+		*bpp = 4;
+		*attachment = FGL_STENCIL_ATTACHABLE | FGL_DEPTH_ATTACHABLE;
+		return (8 << 8) | 24;
+	default:
+		return -1;
+	}
+}
 
 GL_API GLboolean GL_APIENTRY glIsRenderbufferOES (GLuint renderbuffer)
 {
@@ -25,7 +116,7 @@ GL_API GLboolean GL_APIENTRY glIsRenderbufferOES (GLuint renderbuffer)
 
 GL_API void GL_APIENTRY glBindRenderbufferOES (GLenum target, GLuint renderbuffer)
 {
-	if(target != GL_FRAMEBUFFER_OES) {
+	if(target != GL_RENDERBUFFER_OES) {
 		setError(GL_INVALID_ENUM);
 		return;
 	}
@@ -100,52 +191,6 @@ GL_API void GL_APIENTRY glGenRenderbuffersOES (GLsizei n, GLuint* renderbuffers)
 	} while (--i);
 }
 
-static int fglGetRenderbufferFormatInfo(GLenum format, unsigned *bpp, GLenum *attachment, bool *swap)
-{	
-	*attachment = 0;
-	*swap = 0;
-
-	switch (format) {
-	case GL_RGBA4_OES: //REQUIRED
-		*bpp = 2;
-		*attachment = FGL_COLOR0_ATTACHABLE;
-		return -1;
-	case GL_RGB5_A1_OES: //REQUIRED
-		*bpp = 2;
-		*attachment = FGL_COLOR0_ATTACHABLE;
-		return FGPF_COLOR_MODE_565;
-	case GL_RGB565_OES: //REQUIRED
-		*bpp = 2;
-		*attachment = FGL_COLOR0_ATTACHABLE;
-		return -1;
-	case GL_RGBA8_OES:// OPTIONAL - Needs swapping in pixel shader
-		*bpp = 4;
-		*swap = 1;
-		*attachment = FGL_COLOR0_ATTACHABLE;
-		return FGPF_COLOR_MODE_8888;
-	case GL_RGB8_OES: // OPTIONAL - Needs swapping in pixel shader
-		*bpp = 4;
-		*swap = 1;
-		*attachment = FGL_COLOR0_ATTACHABLE;
-		return FGPF_COLOR_MODE_0888;
-	case GL_DEPTH_COMPONENT16_OES: //REQUIRED
-	case GL_DEPTH_COMPONENT24_OES: //OPTIONAL
-	case GL_DEPTH_COMPONENT32_OES: //OPTIONAL
-		*attachment = FGL_DEPTH_ATTACHABLE;
-	case GL_STENCIL_INDEX1_OES: //OPTIONAL
-	case GL_STENCIL_INDEX4_OES: //OPTIONAL
-	case GL_STENCIL_INDEX8_OES: //OPTIONAL
-		*attachment = FGL_STENCIL_ATTACHABLE;
-		return -1;
-	case GL_DEPTH_STENCIL_OES: //OES_packed_depth_stencil
-		*bpp = 4;
-		*attachment = FGL_STENCIL_ATTACHABLE | FGL_DEPTH_ATTACHABLE;
-		return (8 << 8) | 24;
-	default:
-		return -1;
-	}
-}
-
 GL_API void GL_APIENTRY glRenderbufferStorageOES (GLenum target, GLenum internalformat, GLsizei width, GLsizei height)
 {
 	if (target != GL_RENDERBUFFER_OES) {
@@ -204,13 +249,45 @@ GL_API void GL_APIENTRY glGetRenderbufferParameterivOES (GLenum target, GLenum p
 
 GL_API GLboolean GL_APIENTRY glIsFramebufferOES (GLuint framebuffer)
 {
-	FUNC_UNIMPLEMENTED;
-	return GL_FALSE;
+	if (framebuffer == 0 || !fglFrameBufferObjects.isValid(framebuffer))
+		return GL_FALSE;
+
+	return GL_TRUE;
 }
 
 GL_API void GL_APIENTRY glBindFramebufferOES (GLenum target, GLuint framebuffer)
 {
-	FUNC_UNIMPLEMENTED;
+	if(target != GL_FRAMEBUFFER_OES) {
+		setError(GL_INVALID_ENUM);
+		return;
+	}
+
+	if(framebuffer == 0) {
+		FGLContext *ctx = getContext();
+		ctx->framebuffer.binding.unbind();
+		FGLFramebuffer *fb = ctx->framebuffer.getFramebuffer();
+		fglSet
+		return;
+	}
+
+	if(!fglRenderBufferObjects.isValid(framebuffer)) {
+		setError(GL_INVALID_VALUE);
+		return;
+	}
+
+	FGLContext *ctx = getContext();
+
+	FGLRenderBufferObject *obj = fglRenderBufferObjects[framebuffer];
+	if(obj == NULL) {
+		obj = new FGLRenderBufferObject(framebuffer);
+		if (obj == NULL) {
+			setError(GL_OUT_OF_MEMORY);
+			return;
+		}
+		fglRenderBufferObjects[framebuffer] = obj;
+	}
+
+	obj->bind(&ctx->renderbuffer);
 }
 
 GL_API void GL_APIENTRY glDeleteFramebuffersOES (GLsizei n, const GLuint* framebuffers)

@@ -740,6 +740,18 @@ EGLAPI EGLBoolean EGLAPIENTRY eglGetConfigAttrib(EGLDisplay dpy, EGLConfig confi
 void fglSetColorBuffer(FGLContext *gl, FGLSurface *cbuf, unsigned int width,
 		unsigned int height, unsigned int stride, unsigned int format)
 {
+	FGLFramebuffer *def = &gl->framebuffer.defBuffer;
+	def->color = cbuf;
+	def->width = width;
+	def->height = height;
+	def->stride = stride;
+	def->format = format;
+
+	if (gl->framebuffer.binding.unbind()){
+		fglSetColorBufferFBO(gl, def);
+	}
+
+#if 0
 	fimgSetFrameBufSize(gl->fimg, stride, height);
 	fimgSetFrameBufParams(gl->fimg, 1, 0, 255, (fimgColorMode)format);
 	fimgSetColorBufBaseAddr(gl->fimg, cbuf->paddr);
@@ -748,10 +760,17 @@ void fglSetColorBuffer(FGLContext *gl, FGLSurface *cbuf, unsigned int width,
 	gl->surface.stride = stride;
 	gl->surface.height = height;
 	gl->surface.format = format;
+#endif
 }
 
 void fglSetDepthBuffer(FGLContext *gl, FGLSurface *zbuf, unsigned int format)
 {
+	FGLFramebuffer *def = &gl->framebuffer.defBuffer;
+	def->depth = zbuf;
+	def->depthFormat = format;
+	gl->framebuffer.defaultColorBufferChanged();
+
+#if 0
 	if (!zbuf || !format) {
 		gl->surface.depth = 0;
 		gl->surface.depthFormat = 0;
@@ -761,6 +780,7 @@ void fglSetDepthBuffer(FGLContext *gl, FGLSurface *zbuf, unsigned int format)
 	fimgSetZBufBaseAddr(gl->fimg, zbuf->paddr);
 	gl->surface.depth = zbuf;
 	gl->surface.depthFormat = format;
+#endif
 }
 
 void fglSetReadBuffer(FGLContext *gl, FGLSurface *rbuf)

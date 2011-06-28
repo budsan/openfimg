@@ -173,11 +173,22 @@ struct FGLTextureState {
 };
 
 struct FGLFramebufferState {
-	FGLFramebuffer window;
-	FGLFramebufferObjectBinding framebuffer;
+	FGLFramebuffer defBuffer;
+	FGLFramebufferObjectBinding binding;
 
 	FGLFramebufferState() :
-		window() , framebuffer() {}
+		defBuffer() , binding()
+	{
+		defBuffer.status = GL_FRAMEBUFFER_COMPLETE_OES;
+	}
+
+	inline FGLFramebuffer *getFramebuffer(void)
+	{
+		if(binding.isBound())
+			return binding.get();
+		else
+			return &defBuffer;
+	}
 };
 
 struct FGLScissorState {
