@@ -132,8 +132,4 @@ struct FGLColorConfigDesc {
 
 extern const FGLColorConfigDesc fglColorConfigs[];
 extern void fglCleanTextureObjects(FGLContext *ctx);
-
-void fglSetColorBufferFBO(FGLContext *gl, FGLFramebuffer *fbo);
-void fglSetDepthBufferFBO(FGLContext *gl, FGLFramebuffer *fbo);
-
 #endif

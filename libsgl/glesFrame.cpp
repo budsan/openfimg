@@ -11,47 +11,61 @@
 #include "libfimg/fimg.h"
 #include "s3c_g2d.h"
 
-FGLObjectManager<FGLFramebuffer, FGL_MAX_FRAMEBUFFER_OBJECTS> fglFrameBufferObjects;
-FGLObjectManager<FGLRenderbuffer, FGL_MAX_RENDERBUFFER_OBJECTS> fglRenderBufferObjects;
+FGLObjectManager<FGLFramebuffer, FGL_MAX_FRAMEBUFFER_OBJECTS> fglFramebufferObjects;
+FGLObjectManager<FGLRenderbuffer, FGL_MAX_RENDERBUFFER_OBJECTS> fglRenderbufferObjects;
 
-void fglSetColorBufferFBO(FGLContext *gl, FGLFramebuffer *fbo)
+inline void fglSetDefaultFramebuffer(FGLContext *gl)
 {
-	if (fbo->status != GL_FRAMEBUFFER_COMPLETE_OES || !fbo->color) {
-		//TODO: Disable colorbuffer in some way
-		//Mask colorbuffer for example
-		gl->surface.draw = 0;
-		//gl->surface.width = 0;
-		//gl->surface.stride = 0;
-		//gl->surface.height = 0;
-		//gl->surface.format = fbo->format;
-	}
-	else {
-		//TODO: Check this code works with all formats
-		fimgSetFrameBufSize(gl->fimg, fbo->stride, fbo->height);
-		fimgSetFrameBufParams(gl->fimg, 1, 0, 255, (fimgColorMode)fbo->format);
-		fimgSetColorBufBaseAddr(gl->fimg, cbuf->paddr);
-		gl->surface.draw = fbo->color;
-		gl->surface.width = fbo->width;
-		gl->surface.stride = fbo->stride;
-		gl->surface.height = fbo->height;
-		gl->surface.format = fbo->format;
-	}
+	gl->framebuffer.status = GL_FRAMEBUFFER_COMPLETE_OES;
+	fglSetDefaultBuffers(ctx);
 }
 
-void fglSetDepthBufferFBO(FGLContext *gl, FGLFramebuffer *fbo)
+inline void fglSetFramebufferObject(FGLContext *ctx, FGLSurfaceData* sd)
 {
-	if (fbo->status != GL_FRAMEBUFFER_COMPLETE_OES || !fbo->depth || !fbo->depthFormat) {
-		//TODO: Disable depth AND stencil buffer in some way
-		//mask depth and stencil
-		gl->surface.depth = 0;
-		gl->surface.depthFormat = 0;
-	}
-	else {
-		//TODO: Disable depth OR stencil buffer
-		//mask depth or stencil depending of depthFormat
-		fimgSetZBufBaseAddr(gl->fimg, zbuf->paddr);
-		gl->surface.depth = fbo->depth;
-		gl->surface.depthFormat = fbo->depthFormat;
+	fglSetExternalBuffers(ctx, sd->color, sd->depth, sd->width, sd->height,
+				  sd->stride, sd->format, sd->depthFormat);
+}
+
+void fglUpdateFramebufferStatus(FGLContext *ctx, FGLFramebuffer* fbo)
+{
+	//FAST FIX: CHECK FOR UNUSED NAMES
+	struct {
+		unsigned *att;
+		unsigned *typ;
+	} atts[3] = {
+		{&obj->object.colorAttach,   &obj->object.colorType  },
+		{&obj->object.depthAttach,   &obj->object.depthType  },
+		{&obj->object.stencilAttach, &obj->object.stencilType}
+	};
+
+	for (unsigned int i = 0 ; i < 3; i++)
+	{
+		bool invalid;
+		switch (*atts[i].typ)
+		{
+		case FGLFramebuffer::TEXTURE:
+			invalid = glIsTexture(*atts[i].att) == GL_FALSE;
+			break;
+		case FGLFramebuffer::RENDERBUFFER:
+			invalid = glIsRenderbufferOES(*atts[i].att) == GL_FALSE;
+			break;
+		case FGLFramebuffer::NONE:
+			invalid = false;
+			break;
+		default:
+			invalid = true; //This must do not happen
+			break;
+		}
+
+		if (invalid) {
+			*atts[i].att = 0;
+			*atts[i].typ = FGLFramebuffer::NONE;
+		}
+
+		if (atts[i] == FGLFramebuffer::TEXTURE)
+		{
+
+		}
 	}
 }
 
@@ -108,7 +122,7 @@ static int fglGetRenderbufferFormatInfo(GLenum format, unsigned *bpp, GLenum *at
 
 GL_API GLboolean GL_APIENTRY glIsRenderbufferOES (GLuint renderbuffer)
 {
-	if (renderbuffer == 0 || !fglRenderBufferObjects.isValid(renderbuffer))
+	if (renderbuffer == 0 || !fglRenderbufferObjects.isValid(renderbuffer))
 		return GL_FALSE;
 
 	return GL_TRUE;
@@ -127,21 +141,21 @@ GL_API void GL_APIENTRY glBindRenderbufferOES (GLenum target, GLuint renderbuffe
 		return;
 	}
 
-	if(!fglRenderBufferObjects.isValid(renderbuffer)) {
+	if(!fglRenderbufferObjects.isValid(renderbuffer)) {
 		setError(GL_INVALID_VALUE);
 		return;
 	}
 
 	FGLContext *ctx = getContext();
 
-	FGLRenderBufferObject *obj = fglRenderBufferObjects[renderbuffer];
+	FGLRenderBufferObject *obj = fglRenderbufferObjects[renderbuffer];
 	if(obj == NULL) {
 		obj = new FGLRenderBufferObject(renderbuffer);
 		if (obj == NULL) {
 			setError(GL_OUT_OF_MEMORY);
 			return;
 		}
-		fglRenderBufferObjects[renderbuffer] = obj;
+		fglRenderbufferObjects[renderbuffer] = obj;
 	}
 
 	obj->bind(&ctx->renderbuffer);
@@ -158,13 +172,13 @@ GL_API void GL_APIENTRY glDeleteRenderbuffersOES (GLsizei n, const GLuint* rende
 		name = *renderbuffers;
 		renderbuffers++;
 
-		if(!fglRenderBufferObjects.isValid(name)) {
+		if(!fglRenderbufferObjects.isValid(name)) {
 			LOGD("Tried to free invalid renderbuffer %d", name);
 			continue;
 		}
 
-		delete (fglRenderBufferObjects[name]);
-		fglRenderBufferObjects.put(name);
+		delete (fglRenderbufferObjects[name]);
+		fglRenderbufferObjects.put(name);
 	} while (--n);
 }
 
@@ -179,13 +193,13 @@ GL_API void GL_APIENTRY glGenRenderbuffersOES (GLsizei n, GLuint* renderbuffers)
 	FGLContext *ctx = getContext();
 
 	do {
-		name = fglRenderBufferObjects.get(ctx);
+		name = fglRenderbufferObjects.get(ctx);
 		if(name < 0) {
 			glDeleteRenderbuffersOES (n - i, renderbuffers);
 			setError(GL_OUT_OF_MEMORY);
 			return;
 		}
-		fglRenderBufferObjects[name] = NULL;
+		fglRenderbufferObjects[name] = NULL;
 		*cur = name;
 		cur++;
 	} while (--i);
@@ -217,7 +231,7 @@ GL_API void GL_APIENTRY glRenderbufferStorageOES (GLenum target, GLenum internal
 	bool swap;
 	int fglFormat = fglGetRenderbufferFormatInfo(internalformat, &bpp, &attachment, &swap);
 	if (fglFormat < 0) {
-		setError(GL_INVALID_VALUE);
+		setError(GL_INVALID_ENUM);
 		return;
 	}
 
@@ -249,7 +263,7 @@ GL_API void GL_APIENTRY glGetRenderbufferParameterivOES (GLenum target, GLenum p
 
 GL_API GLboolean GL_APIENTRY glIsFramebufferOES (GLuint framebuffer)
 {
-	if (framebuffer == 0 || !fglFrameBufferObjects.isValid(framebuffer))
+	if (framebuffer == 0 || !fglFramebufferObjects.isValid(framebuffer))
 		return GL_FALSE;
 
 	return GL_TRUE;
@@ -264,51 +278,175 @@ GL_API void GL_APIENTRY glBindFramebufferOES (GLenum target, GLuint framebuffer)
 
 	if(framebuffer == 0) {
 		FGLContext *ctx = getContext();
-		ctx->framebuffer.binding.unbind();
-		FGLFramebuffer *fb = ctx->framebuffer.getFramebuffer();
-		fglSet
+		if (ctx->framebuffer.binding.isBound()) {
+			ctx->framebuffer.binding.unbind();
+			fglSetDefaultFramebuffer(ctx);
+		}
 		return;
 	}
 
-	if(!fglRenderBufferObjects.isValid(framebuffer)) {
+	if(!fglFramebufferObjects.isValid(framebuffer)) {
 		setError(GL_INVALID_VALUE);
 		return;
 	}
 
 	FGLContext *ctx = getContext();
 
-	FGLRenderBufferObject *obj = fglRenderBufferObjects[framebuffer];
+	FGLFramebufferObject *obj = fglFramebufferObjects[framebuffer];
 	if(obj == NULL) {
-		obj = new FGLRenderBufferObject(framebuffer);
+		obj = new FGLFramebufferObject(framebuffer);
 		if (obj == NULL) {
 			setError(GL_OUT_OF_MEMORY);
 			return;
 		}
-		fglRenderBufferObjects[framebuffer] = obj;
+		fglFramebufferObjects[framebuffer] = obj;
 	}
 
-	obj->bind(&ctx->renderbuffer);
+	obj->bind(&ctx->framebuffer);
+	fglUpdateFramebufferStatus(ctx,& obj->object);
 }
 
 GL_API void GL_APIENTRY glDeleteFramebuffersOES (GLsizei n, const GLuint* framebuffers)
 {
-	FUNC_UNIMPLEMENTED;
+	unsigned name;
+
+	if(n <= 0)
+		return;
+
+	do {
+		name = *framebuffers;
+		framebuffers++;
+
+		if(!fglFramebufferObjects.isValid(name)) {
+			LOGD("Tried to free invalid framebuffer %d", name);
+			continue;
+		}
+
+		delete (fglFramebufferObjects[name]);
+		fglFramebufferObjects.put(name);
+	} while (--n);
+
+	//Here we're checking if this some deleted framebuffer was bound
+	//If it was, we must set default framebuffer.
+	FGLContext *ctx = getContext();
+	if ( ctx->framebuffer.externalBufferInUse &&
+	    !ctx->framebuffer.binding.isBound()) {
+		fglSetDefaultFramebuffer(ctx);
+	}
 }
 
 GL_API void GL_APIENTRY glGenFramebuffersOES (GLsizei n, GLuint* framebuffers)
 {
-	FUNC_UNIMPLEMENTED;
+	if(n <= 0)
+		return;
+
+	int name;
+	GLsizei i = n;
+	GLuint *cur = framebuffers;
+	FGLContext *ctx = getContext();
+
+	do {
+		name = fglFramebufferObjects.get(ctx);
+		if(name < 0) {
+			glDeleteFramebuffersOES (n - i, framebuffers);
+			setError(GL_OUT_OF_MEMORY);
+			return;
+		}
+		fglFramebufferObjects[name] = NULL;
+		*cur = name;
+		cur++;
+	} while (--i);
 }
 
 GL_API GLenum GL_APIENTRY glCheckFramebufferStatusOES (GLenum target)
 {
-	FUNC_UNIMPLEMENTED;
-	return 0;
+	if(target != GL_FRAMEBUFFER_OES) {
+		setError(GL_INVALID_ENUM);
+		return;
+	}
+
+	FGLContext *ctx = getContext();
+	FGLFramebuffer *fb = ctx->framebuffer.binding.get();
+
+	if (fb == 0) { //DEFAULT FRAMEBUFFER
+		return GL_FRAMEBUFFER_COMPLETE_OES;
+	}
+
+	return ctx->framebuffer.status;
 }
 
 GL_API void GL_APIENTRY glFramebufferRenderbufferOES (GLenum target, GLenum attachment, GLenum renderbuffertarget, GLuint renderbuffer)
 {
-	FUNC_UNIMPLEMENTED;
+	if(target != GL_FRAMEBUFFER_OES) {
+		setError(GL_INVALID_OPERATION);
+		return;
+	}
+
+	FGLRenderbuffer *rb;
+	if (renderbuffer != 0) {
+
+		if (renderbuffertarget != GL_RENDERBUFFER_OES) {
+			setError(GL_INVALID_OPERATION);
+			return;
+		}
+
+		if(!fglRenderbufferObjects.isValid(renderbuffer)) {
+			setError(GL_INVALID_OPERATION);
+			return;
+		}
+
+		FGLRenderBufferObject *obj = fglRenderbufferObjects[renderbuffer];
+		if(obj == NULL) {
+			return;
+		}
+		rb = &obj->object;
+	}
+
+	FGLContext *ctx = getContext();
+
+	if (!ctx->framebuffer.binding.isBound()) {
+		setError(GL_INVALID_OPERATION);
+		return;
+	}
+
+	//WE KNOW FOR SURE FB IS NOT NULL
+	FGLFramebuffer *fb = ctx->framebuffer.binding.get();
+	unsigned attachmask = 0;
+	unsigned *attach;
+	unsigned *type;
+
+	switch (attachment)
+	{
+	case GL_COLOR_ATTACHMENT0_OES:
+		attach = &fb->colorAttach;
+		type   = &fb->colorType;
+		attachmask = FGL_COLOR0_ATTACHABLE;
+		break;
+	case GL_DEPTH_ATTACHMENT_OES:
+		attach = &fb->depthAttach;
+		type   = &fb->depthType;
+		attachmask = FGL_DEPTH_ATTACHABLE;
+		break;
+	case GL_STENCIL_ATTACHMENT_OES:
+		attach = &fb->stencilAttach;
+		type   = &fb->stencilType;
+		attachmask = FGL_DEPTH_ATTACHABLE;
+		break;
+	}
+
+	if (attachmask)
+	{
+		if (renderbuffer == 0) {
+			*attach = 0;
+			*type = FGLFramebuffer::NONE;
+		}
+		else {
+			*attach = renderbuffer;
+			*type = FGLFramebuffer::RENDERBUFFER;
+		}
+
+		fglUpdateFramebufferStatus(ctx, fb);
+	}
 }
 
 GL_API void GL_APIENTRY glFramebufferTexture2DOES (GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level)

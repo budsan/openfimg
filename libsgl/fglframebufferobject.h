@@ -24,7 +24,8 @@ struct FGLRenderbuffer
 	bool		swap;
 
 	FGLRenderbuffer()
-		: surface(0), width(0), height(0), format(GL_RGB)
+		: surface(0), width(0), height(0), format(GL_RGB),
+		  attachment(0)
 	{
 
 	}
@@ -37,15 +38,14 @@ struct FGLRenderbuffer
 
 struct FGLFramebuffer
 {
-	GLenum status;
-
 	unsigned colorAttach;
 	unsigned depthAttach;
 	unsigned stencilAttach;
 
-	GLenum colorType; //ZERO, TEXTURE, RENDERBUFFER
-	GLenum depthType;
-	GLenum stencilType;
+	enum { NONE = 0, TEXTURE, RENDERBUFFER };
+	unsigned colorType;
+	unsigned depthType;
+	unsigned stencilType;
 
 	//------------------//
 

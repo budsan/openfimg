@@ -172,22 +172,40 @@ struct FGLTextureState {
 	}
 };
 
+struct FGLSurfaceData {
+	FGLSurface *color;
+	FGLSurface *depth;
+
+	unsigned int width;
+	unsigned int height;
+	unsigned int stride;
+	unsigned int format;
+	unsigned int depthFormat;
+
+	FGLSurfaceData()
+		: color(0), depth(0), width(0),
+		  height(0), stride(0), format(0)
+	{
+
+	}
+};
+
 struct FGLFramebufferState {
-	FGLFramebuffer defBuffer;
+	FGLSurfaceData defBuffer;
+	FGLSurfaceData curBuffer;
+	bool externalBufferInUse;
+	GLenum status;
 	FGLFramebufferObjectBinding binding;
 
 	FGLFramebufferState() :
-		defBuffer() , binding()
-	{
-		defBuffer.status = GL_FRAMEBUFFER_COMPLETE_OES;
+		defBuffer() , externalBufferInUse(false), binding() {
+
 	}
 
-	inline FGLFramebuffer *getFramebuffer(void)
+	inline bool isComplete()
 	{
-		if(binding.isBound())
-			return binding.get();
-		else
-			return &defBuffer;
+		FGLFramebuffer *b = binding.get();
+		return b ? b->status : GL_FRAMEBUFFER_COMPLETE_OES;
 	}
 };
 
@@ -270,6 +288,10 @@ struct FGLContext {
 			busyTexture[i] = 0;
 	}
 };
+
+// BUDSAN: I don't know where should be the right place for this prototypes:
+void fglSetDefaultBuffers(FGLContext *gl);
+void fglSetExternalBuffers(FGLContext *gl);
 
 // We attempt to run in parallel with software GL
 //#define FGL_AGL_COEXIST
