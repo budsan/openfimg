@@ -17,51 +17,126 @@ extern FGLObjectManager<FGLTexture, FGL_MAX_TEXTURE_OBJECTS> fglTextureObjects;
 
 inline void fglSetDefaultFramebuffer(FGLContext *gl)
 {
+	memcpy(&gl->framebuffer.curBuffer, &gl->framebuffer.defBuffer, sizeof(FGLSurfaceData));
+	gl->framebuffer.externalBufferInUse = false;
 	gl->framebuffer.status = GL_FRAMEBUFFER_COMPLETE_OES;
-	fglSetDefaultBuffers(ctx);
+	fglSetCurrentBuffers(gl);
+}
+
+bool fglIsFramebufferAttachmentComplete(unsigned name, unsigned type, unsigned attachmask)
+{
+	switch(type)
+	{
+	case FGLFramebuffer::RENDERBUFFER:
+	{
+		//Object must exists due to when its deleted callback notice that
+		FGLRenderBufferObject *obj = fglRenderbufferObjects[name];
+
+		if (obj->object.width || obj->object.height == 0) {
+			return false;
+		}
+
+		if (!(obj->object.attachment & attachmask)) {
+			return false;
+		}
+
+		break;
+	}
+	case FGLFramebuffer::TEXTURE:
+	{
+		//Object must exists due to when its deleted callback notice that
+		FGLTextureObject *obj = fglTextureObjects[name];
+
+		if (obj->object.width || obj->object.height == 0) {
+			return false;
+		}
+
+		//TODO:
+		//if (!(obj->attachment & attachmask)) {
+		//	return false;
+		//}
+		break;
+	}
+	case FGLFramebuffer::NONE:
+	default:
+		break;
+	}
+
+	return true;
+}
+
+void fglGetFramebufferAttachmentDimensions(unsigned name, unsigned type,
+					   unsigned &width, unsigned &height) {
+	switch(type)
+	{
+	case FGLFramebuffer::RENDERBUFFER:
+	{
+		FGLRenderBufferObject *obj = fglRenderbufferObjects[name];
+		width  = obj->object.width;
+		height = obj->object.height;
+		break;
+	}
+	case FGLFramebuffer::TEXTURE:
+	{
+		FGLTextureObject *obj = fglTextureObjects[name];
+		width  = obj->object.width;
+		height = obj->object.height;
+		break;
+	}
+	case FGLFramebuffer::NONE:
+	default:
+		width  = 0;
+		height = 0;
+		break;
+	}
 }
 
 void fglUpdateFramebufferStatus(FGLContext *ctx, FGLFramebuffer* fbo)
 {
-	//FAST FIX: CHECK FOR UNUSED NAMES
 	struct {
-		unsigned *att;
-		unsigned *typ;
+		unsigned name;
+		unsigned type;
+		unsigned mask;
 	} atts[3] = {
-		{&obj->object.colorAttach,   &obj->object.colorType  },
-		{&obj->object.depthAttach,   &obj->object.depthType  },
-		{&obj->object.stencilAttach, &obj->object.stencilType}
+		{fbo->colorName,   fbo->colorType,   FGL_COLOR0_ATTACHABLE},
+		{fbo->depthName,   fbo->depthType,   FGL_DEPTH_ATTACHABLE},
+		{fbo->stencilName, fbo->stencilType, FGL_STENCIL_ATTACHABLE}
 	};
 
-	for (unsigned int i = 0 ; i < 3; i++)
-	{
-		bool invalid;
-		switch (*atts[i].typ)
-		{
-		case FGLFramebuffer::TEXTURE:
-			invalid = glIsTexture(*atts[i].att) == GL_FALSE;
-			break;
-		case FGLFramebuffer::RENDERBUFFER:
-			invalid = glIsRenderbufferOES(*atts[i].att) == GL_FALSE;
-			break;
-		case FGLFramebuffer::NONE:
-			invalid = false;
-			break;
-		default:
-			invalid = true; //This must do not happen
-			break;
-		}
-
-		if (invalid) {
-			*atts[i].att = 0;
-			*atts[i].typ = FGLFramebuffer::NONE;
-		}
-
-		if (atts[i] == FGLFramebuffer::TEXTURE)
-		{
-
+	for (unsigned int i = 0 ; i < 3; i++) {
+		if (!fglIsFramebufferAttachmentComplete(
+			atts[i].name, atts[i].type, atts[i].mask)) {
+			ctx->framebuffer.status = GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT_OES;
+			return;
 		}
 	}
+
+	unsigned fw = 0, fh = 0;
+	for (unsigned int i = 0 ; i < 3; i++)
+	{
+
+		unsigned w = 0, h = 0;
+		fglGetFramebufferAttachmentDimensions( atts[i].name, atts[i].type, w, h);
+
+		if ( w  == 0 ) continue;
+		if ( fw == 0 ) {
+			fw = w;
+			fh = h;
+		}
+		else {
+			if (fw != w || fh != h) {
+				ctx->framebuffer.status = GL_FRAMEBUFFER_INCOMPLETE_DIMENSIONS_OES;
+				return;
+			}
+		}
+	}
+
+	if ( fw == 0 ) {
+		ctx->framebuffer.status = GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT_OES;
+		return;
+	}
+
+	//TODO: CHECK FOR GL_FRAMEBUFFER_UNSUPPORTED_OES
 }
 
 static int fglGetRenderbufferFormatInfo(GLenum format, unsigned *bpp, GLenum *attachment, bool *swap)
@@ -240,14 +315,22 @@ GL_API void GL_APIENTRY glRenderbufferStorageOES (GLenum target, GLenum internal
 		obj->swap = swap;
 		unsigned size = width * height * bpp;
 
+		delete obj->surface;
+		obj->surface = 0;
+
 		// Setup surface
-		obj->surface = new FGLLocalSurface(size);
-		if(!obj->surface || !obj->surface->isValid()) {
-			delete obj->surface;
-			obj->surface = 0;
-			setError(GL_OUT_OF_MEMORY);
-			return;
+		if (size)
+		{
+			obj->surface = new FGLLocalSurface(size);
+			if(!obj->surface || !obj->surface->isValid()) {
+				delete obj->surface;
+				obj->surface = 0;
+				setError(GL_OUT_OF_MEMORY);
+				return;
+			}
 		}
+
+		obj->changed();
 	}
 }
 
@@ -297,7 +380,7 @@ GL_API void GL_APIENTRY glBindFramebufferOES (GLenum target, GLuint framebuffer)
 		fglFramebufferObjects[framebuffer] = obj;
 	}
 
-	obj->bind(&ctx->framebuffer);
+	obj->bind(&ctx->framebuffer.binding);
 	fglUpdateFramebufferStatus(ctx,& obj->object);
 }
 
@@ -357,16 +440,10 @@ GL_API GLenum GL_APIENTRY glCheckFramebufferStatusOES (GLenum target)
 {
 	if(target != GL_FRAMEBUFFER_OES) {
 		setError(GL_INVALID_ENUM);
-		return;
+		return 0;
 	}
 
 	FGLContext *ctx = getContext();
-	FGLFramebuffer *fb = ctx->framebuffer.binding.get();
-
-	if (fb == 0) { //DEFAULT FRAMEBUFFER
-		return GL_FRAMEBUFFER_COMPLETE_OES;
-	}
-
 	return ctx->framebuffer.status;
 }
 
@@ -406,38 +483,41 @@ GL_API void GL_APIENTRY glFramebufferRenderbufferOES (GLenum target, GLenum atta
 
 	//WE KNOW FOR SURE FB IS NOT NULL
 	FGLFramebuffer *fb = ctx->framebuffer.binding.get();
-	unsigned attachmask = 0;
-	unsigned *attach;
+	FGLAttach *attach = NULL;
+	unsigned *name;
 	unsigned *type;
+
 
 	switch (attachment)
 	{
 	case GL_COLOR_ATTACHMENT0_OES:
+		name = &fb->colorName;
+		type = &fb->colorType;
 		attach = &fb->colorAttach;
-		type   = &fb->colorType;
-		attachmask = FGL_COLOR0_ATTACHABLE;
 		break;
 	case GL_DEPTH_ATTACHMENT_OES:
+		name = &fb->depthName;
+		type = &fb->depthType;
 		attach = &fb->depthAttach;
-		type   = &fb->depthType;
-		attachmask = FGL_DEPTH_ATTACHABLE;
 		break;
 	case GL_STENCIL_ATTACHMENT_OES:
+		name = &fb->stencilName;
+		type = &fb->stencilType;
 		attach = &fb->stencilAttach;
-		type   = &fb->stencilType;
-		attachmask = FGL_DEPTH_ATTACHABLE;
 		break;
 	}
 
-	if (attachmask)
+	if (attach)
 	{
 		if (renderbuffer == 0) {
-			*attach = 0;
+			*name = 0;
 			*type = FGLFramebuffer::NONE;
+			attach->unattach();
 		}
 		else {
-			*attach = renderbuffer;
+			*name = renderbuffer;
 			*type = FGLFramebuffer::RENDERBUFFER;
+			rb->attach(attach);
 		}
 
 		fglUpdateFramebufferStatus(ctx, fb);
@@ -454,3 +534,194 @@ GL_API void GL_APIENTRY glGetFramebufferAttachmentParameterivOES (GLenum target,
 	FUNC_UNIMPLEMENTED;
 }
 
+/**
+	Attach callbacks
+*/
+
+void fglColorAttachDeleted(void *obj)
+{
+	FGLFramebuffer *fbo = static_cast<FGLFramebuffer*>(obj);
+	fbo->colorName = 0;
+	fbo->colorType = FGLFramebuffer::NONE;
+
+	FGLContext *ctx = getContext();
+	if (ctx->framebuffer.binding.get() == fbo) {
+		fglUpdateFramebufferStatus(ctx, fbo);
+	}
+}
+
+void fglColorAttachChanged(void *obj)
+{
+	FGLFramebuffer *fbo = static_cast<FGLFramebuffer*>(obj);
+
+	FGLContext *ctx = getContext();
+	if (ctx->framebuffer.binding.get() == fbo) {
+		fglUpdateFramebufferStatus(ctx, fbo);
+	}
+}
+
+void fglColorDepthDeleted(void *obj)
+{
+	FGLFramebuffer *fbo = static_cast<FGLFramebuffer*>(obj);
+	fbo->depthName = 0;
+	fbo->depthType = FGLFramebuffer::NONE;
+
+	FGLContext *ctx = getContext();
+	if (ctx->framebuffer.binding.get() == fbo) {
+		//If depth and stencil share same attachment
+		//means attachment is GL_DEPTH_STENCIL_OES and
+		//for don't do same work twice Framebuffer
+		//status will be updated in stencil callback.
+		if (!fbo->IsDepthStencilSameAttachment()) {
+			fglUpdateFramebufferStatus(ctx, fbo);
+		}
+	}
+}
+
+void fglColorDepthChanged(void *obj)
+{
+	FGLFramebuffer *fbo = static_cast<FGLFramebuffer*>(obj);
+	FGLContext *ctx = getContext();
+	if (ctx->framebuffer.binding.get() == fbo) {
+		//If depth and stencil share same attachment
+		//means attachment is GL_DEPTH_STENCIL_OES and
+		//for don't do same work twice Framebuffer
+		//status will be updated in stencil callback.
+		if (!fbo->IsDepthStencilSameAttachment()) {
+			fglUpdateFramebufferStatus(ctx, fbo);
+		}
+	}
+}
+
+void fglColorStencilDeleted(void *obj)
+{
+	FGLFramebuffer *fbo = static_cast<FGLFramebuffer*>(obj);
+	fbo->stencilName = 0;
+	fbo->stencilType = FGLFramebuffer::NONE;
+
+	FGLContext *ctx = getContext();
+	if (ctx->framebuffer.binding.get() == fbo) {
+		fglUpdateFramebufferStatus(ctx, fbo);
+	}
+}
+
+void fglColorStencilChanged(void *obj)
+{
+	FGLFramebuffer *fbo = static_cast<FGLFramebuffer*>(obj);
+	FGLContext *ctx = getContext();
+	if (ctx->framebuffer.binding.get() == fbo) {
+		fglUpdateFramebufferStatus(ctx, fbo);
+	}
+}
+
+/**
+	FGLAttach & FGLAttachable
+*/
+
+FGLAttach::FGLAttach(void *obj, void (*deleted)(void*), void (*changed)(void*)) :
+	attachable(0), obj(obj), deleted(deleted), changed(changed)
+{
+
+}
+
+inline bool FGLAttach::isAttached(void)
+{
+	return attachable != NULL;
+}
+
+inline void FGLAttach::unattach(void)
+{
+	if (!attachable)
+		return;
+
+	attachable->unattach(this);
+}
+
+inline void FGLAttach::attach(FGLAttachable *o)
+{
+	o->attach(this);
+}
+
+inline bool FGLAttach::sameAttachment(FGLAttach *a)
+{
+	return a->attachable == this->attachable;
+}
+
+FGLAttachable::FGLAttachable() : list(NULL) {}
+FGLAttachable::~FGLAttachable()
+{
+	deleted();
+	unattachAll();
+}
+
+void FGLAttachable::deleted(void)
+{
+	FGLAttach *a = list;
+
+	while(a) {
+		if (a->deleted) a->deleted(a->obj);
+		a = a->next;
+	}
+
+	list = NULL;
+}
+
+void FGLAttachable::changed(void)
+{
+	FGLAttach *a = list;
+
+	while(a) {
+		if (a->changed) a->changed(a->obj);
+		a = a->next;
+	}
+
+	list = NULL;
+}
+
+void FGLAttachable::unattachAll(void)
+{
+	FGLAttach *a = list;
+
+	while(a) {
+		a->attachable = NULL;
+		a = a->next;
+	}
+
+	list = NULL;
+}
+
+void FGLAttachable::unattach(FGLAttach *a)
+{
+	if (!isAttached(a))
+		return;
+
+	if (a->next)
+		a->next->prev = a->prev;
+
+	if (a->prev)
+		a->prev->next = a->next;
+	else
+		list = NULL;
+
+	a->attachable = NULL;
+}
+
+void FGLAttachable::attach(FGLAttach *a)
+{
+	if(a->isAttached())
+		a->unattach();
+
+	a->next = list;
+	a->prev = NULL;
+
+	if(list)
+		list->prev = a;
+
+	list = a;
+	a->attachable = this;
+}
+
+bool FGLAttachable::isAttached(FGLAttach *a)
+{
+	return a->attachable == this;
+}

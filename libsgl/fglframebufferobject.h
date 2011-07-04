@@ -3,6 +3,7 @@
 
 #include "eglMem.h"
 #include "fglobject.h"
+#include "fglattach.h"
 
 #include <GLES/gl.h>
 #include <GLES/glext.h>
@@ -11,7 +12,7 @@
 #define FGL_DEPTH_ATTACHABLE   (1<<1)
 #define FGL_STENCIL_ATTACHABLE (1<<2)
 
-struct FGLRenderbuffer
+struct FGLRenderbuffer : public FGLAttachable
 {
 	FGLSurface	*surface;
 	GLint		width;
@@ -36,40 +37,42 @@ struct FGLRenderbuffer
 	}
 };
 
+void fglColorAttachDeleted(void *obj);
+void fglColorAttachChanged(void *obj);
+
+void fglColorDepthDeleted(void *obj);
+void fglColorDepthChanged(void *obj);
+
+void fglColorStencilDeleted(void *obj);
+void fglColorStencilChanged(void *obj);
+
 struct FGLFramebuffer
 {
-	unsigned colorAttach;
-	unsigned depthAttach;
-	unsigned stencilAttach;
+	unsigned colorName;
+	unsigned depthName;
+	unsigned stencilName;
 
 	enum { NONE = 0, TEXTURE, RENDERBUFFER };
 	unsigned colorType;
 	unsigned depthType;
 	unsigned stencilType;
 
-	//------------------//
-
-	FGLSurface *color;
-	FGLSurface *depth;
-
-	unsigned int width;
-	unsigned int height;
-	unsigned int stride;
-	unsigned int format;
-	unsigned int depthFormat;
+	FGLAttach colorAttach;
+	FGLAttach depthAttach;
+	FGLAttach stencilAttach;
 
 	FGLFramebuffer()
-		: status(GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT_OES),
-		  colorAttach(0), depthAttach(0), stencilAttach(0),
+		: colorName(0), depthName(0), stencilName(0),
 		  colorType(0), depthType(0), stencilType(0),
-		  color(0), depth(0), width(0), stride(0), format(0)
-	{
+		  colorAttach  (this, fglColorAttachDeleted, fglColorAttachChanged),
+		  depthAttach  (this, fglColorDepthDeleted,  fglColorDepthChanged),
+		  stencilAttach(this, fglColorStencilDeleted,fglColorStencilChanged) {};
 
-	}
+	~FGLFramebuffer() {}
 
-	~FGLFramebuffer()
-	{
-
+	//Used due to GL_DEPTH_STENCIL_OES
+	inline bool IsDepthStencilSameAttachment() {
+		return depthAttach.sameAttachment(&stencilAttach);
 	}
 };
 

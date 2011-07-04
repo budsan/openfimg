@@ -740,42 +740,42 @@ EGLAPI EGLBoolean EGLAPIENTRY eglGetConfigAttrib(EGLDisplay dpy, EGLConfig confi
 void fglSetColorBuffer(FGLContext *gl, FGLSurface *cbuf, unsigned int width,
 		unsigned int height, unsigned int stride, unsigned int format)
 {
-	gl->framebuffer.defBuffer.color = cbuf;
-	gl->framebuffer.defBuffer.width = width;
-	gl->framebuffer.defBuffer.height = height;
-	gl->framebuffer.defBuffer.stride = stride;
-	gl->framebuffer.defBuffer.format = format;
+	FGLSurfaceData *s = &gl->framebuffer.defBuffer;
+	{
+		s->color = cbuf;
+		s->width = width;
+		s->height = height;
+		s->stride = stride;
+		s->format = format;
+	}
 
 	if (!gl->framebuffer.externalBufferInUse)
 	{
-		gl->surface.draw = cbuf;
-		gl->surface.width = width;
-		gl->surface.stride = stride;
-		gl->surface.height = height;
-		gl->surface.format = format;
+		s = &gl->framebuffer.curBuffer;
 
-		fimgSetFrameBufSize(gl->fimg, stride, height);
-		fimgSetFrameBufParams(gl->fimg, 1, 0, 255, (fimgColorMode)format);
-		fimgSetColorBufBaseAddr(gl->fimg, cbuf->paddr);
+		s->color = cbuf;
+		s->width = width;
+		s->height = height;
+		s->stride = stride;
+		s->format = format;
 	}
 }
 
 void fglSetDepthBuffer(FGLContext *gl, FGLSurface *zbuf, unsigned int format)
 {
-	gl->framebuffer.defBuffer.depth = zbuf;
-	gl->framebuffer.defBuffer.depthFormat = format;
+
+	FGLSurfaceData *s = &gl->framebuffer.defBuffer;
+	{
+		s->depth = zbuf;
+		s->depthFormat = format;
+	}
 
 	if (!gl->framebuffer.externalBufferInUse)
 	{
-		if (!zbuf || !format) {
-			gl->surface.depth = 0;
-			gl->surface.depthFormat = 0;
-			return;
-		}
+		s = &gl->framebuffer.curBuffer;
 
-		fimgSetZBufBaseAddr(gl->fimg, zbuf->paddr);
-		gl->surface.depth = zbuf;
-		gl->surface.depthFormat = format;
+		s->depth = zbuf;
+		s->depthFormat = format;
 	}
 }
 
@@ -784,23 +784,25 @@ void fglSetReadBuffer(FGLContext *gl, FGLSurface *rbuf)
 	gl->surface.read = rbuf;
 }
 
+#if 0
 void fglSetDefaultBuffers(FGLContext *gl)
 {
 	gl->framebuffer.externalBufferInUse = false;
 
-	FGLSurface *color   = gl->framebuffer.defBuffer.color;
-	unsigned int width  = gl->framebuffer.defBuffer.width;
-	unsigned int height = gl->framebuffer.defBuffer.height;
-	unsigned int stride = gl->framebuffer.defBuffer.stride;
-	unsigned int format = gl->framebuffer.defBuffer.format;
+	FGLSurfaceData *s = &gl->framebuffer.defBuffer;
+	FGLSurface *color   = s->color;
+	unsigned int width  = s->width;
+	unsigned int height = s->height;
+	unsigned int stride = s->stride;
+	unsigned int format = s->format;
 
-	FGLSurface *zbuf         = gl->framebuffer.defBuffer.depth;
-	unsigned int depthFormat = gl->framebuffer.defBuffer.depthFormat;
+	FGLSurface *zbuf         = s->depth;
+	unsigned int depthFormat = s->depthFormat;
 
 	if (color)
 	{
-		fimgSetFrameBufSize(gl->fimg, fbo->stride, fbo->height);
-		fimgSetFrameBufParams(gl->fimg, 1, 0, 255, (fimgColorMode)fbo->format);
+		fimgSetFrameBufSize(gl->fimg, stride, height);
+		fimgSetFrameBufParams(gl->fimg, 1, 0, 255, (fimgColorMode)format);
 		fimgSetColorBufBaseAddr(gl->fimg, color->paddr);
 
 		gl->surface.draw = color;
@@ -820,11 +822,10 @@ void fglSetDefaultBuffers(FGLContext *gl)
 		gl->surface.depthFormat = depthFormat;
 	}
 }
+#endif
 
-void fglSetExternalBuffers(FGLContext *gl)
+void fglSetCurrentBuffers(FGLContext *gl)
 {
-	gl->framebuffer.externalBufferInUse = true;
-
 	FGLSurface *color   = gl->framebuffer.curBuffer.color;
 	unsigned int width  = gl->framebuffer.curBuffer.width;
 	unsigned int height = gl->framebuffer.curBuffer.height;
@@ -843,9 +844,9 @@ void fglSetExternalBuffers(FGLContext *gl)
 	//TODO: SET TO FIMG EXTERNAL SURFACE CORRECTLY
 	if (color)
 	{
-		fimgSetFrameBufSize(gl->fimg, fbo->stride, fbo->height);
-		fimgSetFrameBufParams(gl->fimg, 1, 0, 255, (fimgColorMode)fbo->format);
-		fimgSetColorBufBaseAddr(gl->fimg, cbuf->paddr);
+		fimgSetFrameBufSize(gl->fimg, stride, height);
+		fimgSetFrameBufParams(gl->fimg, 1, 0, 255, (fimgColorMode)format);
+		fimgSetColorBufBaseAddr(gl->fimg, color->paddr);
 	}
 	else
 	{
@@ -862,8 +863,8 @@ void fglSetExternalBuffers(FGLContext *gl)
 		//TODO: Disable depth OR stencil buffer
 		//mask depth or stencil depending of depthFormat
 		fimgSetZBufBaseAddr(gl->fimg, zbuf->paddr);
-		gl->surface.depth = fbo->depth;
-		gl->surface.depthFormat = fbo->depthFormat;
+		gl->surface.depth = zbuf;
+		gl->surface.depthFormat = depthFormat;
 	}
 }
 
@@ -1472,6 +1473,7 @@ EGLBoolean FGLWindowSurface::bindDrawSurface(FGLContext* gl)
 {
 	fglSetColorBuffer(gl, color, width, height, stride, format);
 	fglSetDepthBuffer(gl, depth, depthFormat);
+	fglSetCurrentBuffers(gl);
 
 	return EGL_TRUE;
 }
@@ -1650,6 +1652,7 @@ EGLBoolean FGLPbufferSurface::bindDrawSurface(FGLContext* gl)
 {
 	fglSetColorBuffer(gl, color, width, height, stride, format);
 	fglSetDepthBuffer(gl, depth, depthFormat);
+	fglSetCurrentBuffers(gl);
 
 	return EGL_TRUE;
 }
