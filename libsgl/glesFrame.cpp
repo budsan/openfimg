@@ -13,17 +13,12 @@
 
 FGLObjectManager<FGLFramebuffer, FGL_MAX_FRAMEBUFFER_OBJECTS> fglFramebufferObjects;
 FGLObjectManager<FGLRenderbuffer, FGL_MAX_RENDERBUFFER_OBJECTS> fglRenderbufferObjects;
+extern FGLObjectManager<FGLTexture, FGL_MAX_TEXTURE_OBJECTS> fglTextureObjects;
 
 inline void fglSetDefaultFramebuffer(FGLContext *gl)
 {
 	gl->framebuffer.status = GL_FRAMEBUFFER_COMPLETE_OES;
 	fglSetDefaultBuffers(ctx);
-}
-
-inline void fglSetFramebufferObject(FGLContext *ctx, FGLSurfaceData* sd)
-{
-	fglSetExternalBuffers(ctx, sd->color, sd->depth, sd->width, sd->height,
-				  sd->stride, sd->format, sd->depthFormat);
 }
 
 void fglUpdateFramebufferStatus(FGLContext *ctx, FGLFramebuffer* fbo)

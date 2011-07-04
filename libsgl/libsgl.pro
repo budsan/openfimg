@@ -52,7 +52,8 @@ HEADERS += \
     libfimg/config.h \
     libfimg/shaders/vert.h \
     libfimg/shaders/frag.h \
-    fglframebufferobject.h
+    fglframebufferobject.h \
+    fglattach.h
 
 symbian {
     #Symbian specific definitions
