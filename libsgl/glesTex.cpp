@@ -736,6 +736,8 @@ GL_API void GL_APIENTRY glTexImage2D (GLenum target, GLint level,
 		obj->levels = (1 << 0);
 		obj->dirty = true;
 		obj->eglImage = 0;
+
+		obj->changed();
 	}
 
 	// Copy the image (with conversion if needed)

@@ -76,7 +76,9 @@ static char const * const gExtensionsString =
 	//"GL_ANDROID_user_clip_plane "           // TODO
 	//"GL_ANDROID_vertex_buffer_object "      // TODO
 	//"GL_ANDROID_generate_mipmap "           // TODO
-	"GL_OES_point_size_array"
+	"GL_OES_point_size_array "
+	"GL_OES_framebuffer_object "
+	""
 ;
 
 static const GLint fglCompressedTextureFormats[] = {
@@ -225,6 +227,23 @@ GL_API void GL_APIENTRY glGetIntegerv (GLenum pname, GLint *params)
 	case GL_TEXTURE_BINDING_2D: {
 		FGLTextureObjectBinding *b =
 				&ctx->texture[ctx->activeTexture].binding;
+		if (b->isBound())
+			params[0] = b->getName();
+		else
+			params[0] = 0.0f;
+		break; }
+
+	case GL_FRAMEBUFFER_BINDING_OES: {
+		FGLFramebufferObjectBinding *b =
+				&ctx->framebuffer.binding;
+		if (b->isBound())
+			params[0] = b->getName();
+		else
+			params[0] = 0.0f;
+		break; }
+	case GL_RENDERBUFFER_BINDING_OES: {
+		FGLRenderBufferObjectBinding *b =
+				&ctx->renderbuffer;
 		if (b->isBound())
 			params[0] = b->getName();
 		else
@@ -458,6 +477,9 @@ GL_API void GL_APIENTRY glGetIntegerv (GLenum pname, GLint *params)
 		params[0] = FGL_MAX_SUBPIXEL_BITS;
 		break;
 	case GL_MAX_TEXTURE_SIZE:
+		params[0] = FGL_MAX_TEXTURE_SIZE;
+		break;
+	case GL_MAX_RENDERBUFFER_SIZE_OES:
 		params[0] = FGL_MAX_TEXTURE_SIZE;
 		break;
 	case GL_MAX_VIEWPORT_DIMS:

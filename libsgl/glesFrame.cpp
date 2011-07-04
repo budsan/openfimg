@@ -146,42 +146,45 @@ static int fglGetRenderbufferFormatInfo(GLenum format, unsigned *bpp, GLenum *at
 
 	switch (format) {
 	case GL_RGBA4_OES: //REQUIRED
-		//*bpp = 2;
-		//*attachment = FGL_COLOR0_ATTACHABLE;
-		//return -1;
-		*bpp = 4;
-		*swap = 1;
+		*bpp = 2;
 		*attachment = FGL_COLOR0_ATTACHABLE;
+		return FGPF_COLOR_MODE_4444;
 	case GL_RGB5_A1_OES: //REQUIRED
 		*bpp = 2;
 		*attachment = FGL_COLOR0_ATTACHABLE;
-		return FGPF_COLOR_MODE_565;
+		return FGPF_COLOR_MODE_1555;
 	case GL_RGB565_OES: //REQUIRED
 		*bpp = 2;
 		*attachment = FGL_COLOR0_ATTACHABLE;
 		return FGPF_COLOR_MODE_565;
-	case GL_RGBA8_OES:// OPTIONAL - Needs swapping in pixel shader
+	case GL_RGBA8_OES:// OPTIONAL
 		*bpp = 4;
-		*swap = 1;
+		//*swap = 1;
 		*attachment = FGL_COLOR0_ATTACHABLE;
 		return FGPF_COLOR_MODE_8888;
-	case GL_RGB8_OES: // OPTIONAL - Needs swapping in pixel shader
+	case GL_RGB8_OES: // OPTIONAL
 		*bpp = 4;
-		*swap = 1;
+		//*swap = 1;
 		*attachment = FGL_COLOR0_ATTACHABLE;
 		return FGPF_COLOR_MODE_0888;
 	case GL_DEPTH_COMPONENT16_OES: //REQUIRED
 	case GL_DEPTH_COMPONENT24_OES: //OPTIONAL
+		*bpp = 4;
 		*attachment = FGL_DEPTH_ATTACHABLE;
-
+		return 24;
 	case GL_DEPTH_COMPONENT32_OES: //OPTIONAL
 		return -1;
 	case GL_STENCIL_INDEX1_OES: //OPTIONAL
+		//mask = (1<<1)-1;
 	case GL_STENCIL_INDEX4_OES: //OPTIONAL
+		//mask = (1<<4)-1;
 	case GL_STENCIL_INDEX8_OES: //OPTIONAL
+		//mask = (1<<8)-1;
+		*bpp = 4;
 		*attachment = FGL_STENCIL_ATTACHABLE;
-		return -1;
+		return (8 << 8);
 	case GL_DEPTH_STENCIL_OES: //OES_packed_depth_stencil
+		//mask = (1<<8)-1;
 		*bpp = 4;
 		*attachment = FGL_STENCIL_ATTACHABLE | FGL_DEPTH_ATTACHABLE;
 		return (8 << 8) | 24;
@@ -305,6 +308,11 @@ GL_API void GL_APIENTRY glRenderbufferStorageOES (GLenum target, GLenum internal
 		return;
 	}
 
+	if (width != obj->width || height != obj->height || bpp != obj->bpp) {
+		delete obj->surface;
+		obj->surface = 0;
+	}
+
 	if (!obj->surface) {
 		obj->width = width;
 		obj->height = height;
@@ -314,9 +322,6 @@ GL_API void GL_APIENTRY glRenderbufferStorageOES (GLenum target, GLenum internal
 		obj->attachment = attachment;
 		obj->swap = swap;
 		unsigned size = width * height * bpp;
-
-		delete obj->surface;
-		obj->surface = 0;
 
 		// Setup surface
 		if (size)

@@ -24,8 +24,9 @@
 
 #include "eglMem.h"
 #include "fglobject.h"
+#include "fglattach.h"
 
-struct FGLTexture {
+struct FGLTexture : public FGLAttachable {
 	/* Memory surface */
 	FGLSurface	*surface;
 	/* GL state */
