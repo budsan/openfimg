@@ -24,12 +24,8 @@ struct FGLRenderbuffer : public FGLAttachable
 	uint32_t	bpp;
 	bool		swap;
 
-	FGLRenderbuffer()
-		: surface(0), width(0), height(0), format(GL_RGB),
-		  attachment(0)
-	{
-
-	}
+	FGLRenderbuffer() : surface(0), width(0),
+		height(0), format(GL_RGB), attachment(0) {}
 
 	~FGLRenderbuffer()
 	{

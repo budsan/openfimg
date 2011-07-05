@@ -784,87 +784,45 @@ void fglSetReadBuffer(FGLContext *gl, FGLSurface *rbuf)
 	gl->surface.read = rbuf;
 }
 
-#if 0
-void fglSetDefaultBuffers(FGLContext *gl)
-{
-	gl->framebuffer.externalBufferInUse = false;
-
-	FGLSurfaceData *s = &gl->framebuffer.defBuffer;
-	FGLSurface *color   = s->color;
-	unsigned int width  = s->width;
-	unsigned int height = s->height;
-	unsigned int stride = s->stride;
-	unsigned int format = s->format;
-
-	FGLSurface *zbuf         = s->depth;
-	unsigned int depthFormat = s->depthFormat;
-
-	if (color)
-	{
-		fimgSetFrameBufSize(gl->fimg, stride, height);
-		fimgSetFrameBufParams(gl->fimg, 1, 0, 255, (fimgColorMode)format);
-		fimgSetColorBufBaseAddr(gl->fimg, color->paddr);
-
-		gl->surface.draw = color;
-		gl->surface.width = width;
-		gl->surface.stride = stride;
-		gl->surface.height = height;
-		gl->surface.format = format;
-	}
-
-	if (!zbuf || !depthFormat) {
-		gl->surface.depth = 0;
-		gl->surface.depthFormat = 0;
-	}
-	else {
-		fimgSetZBufBaseAddr(gl->fimg, zbuf->paddr);
-		gl->surface.depth = zbuf;
-		gl->surface.depthFormat = depthFormat;
-	}
-}
-#endif
-
 void fglSetCurrentBuffers(FGLContext *ctx)
 {
-	FGLSurface *color   = ctx->framebuffer.curBuffer.color;
-	unsigned int width  = ctx->framebuffer.curBuffer.width;
-	unsigned int height = ctx->framebuffer.curBuffer.height;
-	unsigned int stride = ctx->framebuffer.curBuffer.stride;
-	unsigned int format = ctx->framebuffer.curBuffer.format;
+	FGLSurfaceData  &curr = ctx->framebuffer.curBuffer;
+	FGLSurfaceState &surf = ctx->surface;
+	FGLMaskState    &mask = ctx->perFragment.mask;
 
-	FGLSurface *zbuf         = ctx->framebuffer.curBuffer.depth;
-	unsigned int depthFormat = ctx->framebuffer.curBuffer.depthFormat;
+	surf.draw   = curr.color;
+	surf.width  = curr.width;
+	surf.stride = curr.stride;
+	surf.height = curr.height;
+	surf.format = curr.format;
 
-	ctx->surface.draw = color;
-	ctx->surface.width = width;
-	ctx->surface.stride = stride;
-	ctx->surface.height = height;
-	ctx->surface.format = format;
-
-	//TODO: SET TO FIMG EXTERNAL SURFACE CORRECTLY
-	if (color) {
-		fimgSetFrameBufSize(ctx->fimg, stride, height);
-		fimgSetFrameBufParams(ctx->fimg, 1, 0, 255, (fimgColorMode)format);
-		fimgSetColorBufBaseAddr(ctx->fimg, color->paddr);
+	//Set color buffer and format and set color mask
+	if (surf.draw) {
+		fimgSetFrameBufSize(ctx->fimg, curr.stride, curr.height);
+		fimgSetFrameBufParams(ctx->fimg, 1, 0, 255, (fimgColorMode)curr.format);
+		fimgSetColorBufBaseAddr(ctx->fimg, curr.color->paddr);
+		fimgSetColorBufWriteMask(ctx->fimg,
+			mask.red, mask.green, mask.green, mask.alpha);
 	}
 	else {
-		//DISABLE WRITING
+		fimgSetColorBufWriteMask(ctx->fimg,0,0,0,0);
 	}
 
-	//Storing depth/stencil buffer and format
-	if (!zbuf || !depthFormat) {
-		ctx->surface.depth = 0;
-		ctx->surface.depthFormat = 0;
+	//Save depth/stencil buffer and format
+	if (curr.depth && curr.depthFormat) {
+		surf.depth = curr.depth;
+		surf.depthFormat = curr.depthFormat;
+
+		fimgSetZBufBaseAddr(ctx->fimg, curr.depth->paddr);
 	}
 	else {
-		fimgSetZBufBaseAddr(ctx->fimg, zbuf->paddr);
-		ctx->surface.depth = zbuf;
-		ctx->surface.depthFormat = depthFormat;
+		surf.depth = 0;
+		surf.depthFormat = 0;
 	}
 
 	//Enable/Disable depth test and writing
-	if (ctx->surface.depthFormat & 0xff) {
-		fimgSetZBufWriteMask(ctx->fimg, ctx->perFragment.mask.depth);
+	if (surf.depthFormat & 0xff) {
+		fimgSetZBufWriteMask(ctx->fimg, mask.depth);
 		fimgSetDepthEnable(ctx->fimg, ctx->enable.depthTest);
 	}
 	else {
@@ -873,9 +831,9 @@ void fglSetCurrentBuffers(FGLContext *ctx)
 	}
 
 	//Enable/Disable stencil test and writing
-	if (ctx->surface.depthFormat >> 8) {
-		fimgSetStencilBufWriteMask(ctx->fimg, 0, ctx->perFragment.mask.stencil);
-		fimgSetStencilBufWriteMask(ctx->fimg, 1, ctx->perFragment.mask.stencil);
+	if (surf.depthFormat >> 8) {
+		fimgSetStencilBufWriteMask(ctx->fimg, 0, mask.stencil);
+		fimgSetStencilBufWriteMask(ctx->fimg, 1, mask.stencil);
 		fimgSetStencilEnable(ctx->fimg, ctx->enable.stencilTest);
 	}
 	else {
@@ -883,8 +841,6 @@ void fglSetCurrentBuffers(FGLContext *ctx)
 		fimgSetStencilBufWriteMask(ctx->fimg, 1, 0);
 		fimgSetStencilEnable(ctx->fimg, 0);
 	}
-
-	fimgSetZBufBaseAddr(ctx->fimg, ctx->surface.depth->paddr);
 }
 
 struct FGLRenderSurface
@@ -2194,14 +2150,14 @@ EGLAPI EGLBoolean EGLAPIENTRY eglMakeCurrent(EGLDisplay dpy, EGLSurface draw,
 					w = d->getWidth();
 					h = d->getHeight();
 				}
-
+#if 0
 				uint32_t depth = (gl->surface.depthFormat & 0xff) ? 1 : 0;
 				uint32_t stencil = (gl->surface.depthFormat >> 8) ? 0xff : 0;
 
 				fimgSetZBufWriteMask(gl->fimg, depth);
 				fimgSetStencilBufWriteMask(gl->fimg, 0, stencil);
 				fimgSetStencilBufWriteMask(gl->fimg, 1, stencil);
-#if 0
+
 				fglSetClipper(0, 0, w, h);
 #endif
 				glViewport(0, 0, w, h);

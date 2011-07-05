@@ -1671,7 +1671,8 @@ GL_API void GL_APIENTRY glColorMask (GLboolean red, GLboolean green,
 	ctx->perFragment.mask.blue = blue;
 	ctx->perFragment.mask.alpha = alpha;
 
-	fimgSetColorBufWriteMask(ctx->fimg, red, green, blue, alpha);
+	if (ctx->surface.draw)
+		fimgSetColorBufWriteMask(ctx->fimg, red, green, blue, alpha);
 }
 
 GL_API void GL_APIENTRY glDepthMask (GLboolean flag)

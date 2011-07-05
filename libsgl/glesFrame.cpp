@@ -51,10 +51,14 @@ bool fglIsFramebufferAttachmentComplete(unsigned name, unsigned type, unsigned a
 			return false;
 		}
 
-		//TODO:
-		//if (!(obj->attachment & attachmask)) {
-		//	return false;
-		//}
+		GLenum format = obj->object.format;
+		if (format != GL_RGBA && format != GL_RGB) {
+			return false;
+		}
+
+		if (!(FGL_COLOR0_ATTACHABLE & attachmask)) {
+			return false;
+		}
 		break;
 	}
 	case FGLFramebuffer::NONE:
@@ -125,12 +129,14 @@ void fglUpdateFramebufferStatus(FGLContext *ctx, FGLFramebuffer* fbo)
 		}
 		else {
 			if (fw != w || fh != h) {
+				// exists an attachment with sizes different from the others
 				ctx->framebuffer.status = GL_FRAMEBUFFER_INCOMPLETE_DIMENSIONS_OES;
 				return;
 			}
 		}
 	}
 
+	// if fw still 0 means there is no attachment
 	if ( fw == 0 ) {
 		ctx->framebuffer.status = GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT_OES;
 		return;
@@ -139,7 +145,7 @@ void fglUpdateFramebufferStatus(FGLContext *ctx, FGLFramebuffer* fbo)
 	//TODO: CHECK FOR GL_FRAMEBUFFER_UNSUPPORTED_OES
 }
 
-static int fglGetRenderbufferFormatInfo(GLenum format, unsigned *bpp, GLenum *attachment, bool *swap)
+static int fglGetRenderbufferFormatInfo(GLenum format, unsigned *bpp, unsigned *attachment, bool *swap)
 {
 	*attachment = 0;
 	*swap = 0;
@@ -175,19 +181,58 @@ static int fglGetRenderbufferFormatInfo(GLenum format, unsigned *bpp, GLenum *at
 	case GL_DEPTH_COMPONENT32_OES: //OPTIONAL
 		return -1;
 	case GL_STENCIL_INDEX1_OES: //OPTIONAL
-		//mask = (1<<1)-1;
+		//return (1<<8);
 	case GL_STENCIL_INDEX4_OES: //OPTIONAL
-		//mask = (1<<4)-1;
+		//return (4<<8)-1;
 	case GL_STENCIL_INDEX8_OES: //OPTIONAL
-		//mask = (1<<8)-1;
 		*bpp = 4;
 		*attachment = FGL_STENCIL_ATTACHABLE;
 		return (8 << 8);
 	case GL_DEPTH_STENCIL_OES: //OES_packed_depth_stencil
-		//mask = (1<<8)-1;
 		*bpp = 4;
 		*attachment = FGL_STENCIL_ATTACHABLE | FGL_DEPTH_ATTACHABLE;
 		return (8 << 8) | 24;
+	default:
+		return -1;
+	}
+}
+
+static int fglGetTextureFormatInfo(GLenum format, GLenum type,
+					unsigned *bpp, bool *attachment, bool *swap)
+{
+	*attachment = 0;
+	*swap = 0;
+
+	switch (type) {
+	case GL_UNSIGNED_BYTE:
+		switch (format) {
+		case GL_RGB:
+			*bpp = 4;
+			*attachment = FGL_COLOR0_ATTACHABLE;
+			return FGPF_COLOR_MODE_0888;
+		case GL_RGBA:
+			*bpp = 4;
+			//*swap = 1;
+			*attachment = FGL_COLOR0_ATTACHABLE;
+			return FGPF_COLOR_MODE_8888;
+		default:
+			return -1;
+		}
+	case GL_UNSIGNED_SHORT_5_6_5:
+		if (format != GL_RGB) return -1;
+		*bpp = 2;
+		*attachment = FGL_COLOR0_ATTACHABLE;
+		return FGPF_COLOR_MODE_565;
+	case GL_UNSIGNED_SHORT_4_4_4_4:
+		if (format != GL_RGBA) return -1;
+		*bpp = 2;
+		*attachment = FGL_COLOR0_ATTACHABLE;
+		return FGPF_COLOR_MODE_4444;
+	case GL_UNSIGNED_SHORT_5_5_5_1:
+		if (format != GL_RGBA) return -1;
+		*bpp = 2;
+		*attachment = FGL_COLOR0_ATTACHABLE;
+		return FGPF_COLOR_MODE_1555;
 	default:
 		return -1;
 	}

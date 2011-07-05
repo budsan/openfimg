@@ -77,8 +77,7 @@ static char const * const gExtensionsString =
 	//"GL_ANDROID_vertex_buffer_object "      // TODO
 	//"GL_ANDROID_generate_mipmap "           // TODO
 	"GL_OES_point_size_array "
-	"GL_OES_framebuffer_object "
-	""
+	"GL_OES_framebuffer_object"
 ;
 
 static const GLint fglCompressedTextureFormats[] = {
