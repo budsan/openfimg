@@ -9,8 +9,8 @@ public:
 
 	FGLAttachable();
 	~FGLAttachable();
-	inline void deleted(void);
-	inline void changed(void);
+	void deleted(void);
+	void changed(void);
 	inline void unattachAll(void);
 	inline void unattach(FGLAttach *a);
 	inline void attach(FGLAttach *a);
@@ -34,7 +34,7 @@ public:
 	inline bool isAttached(void);
 	inline void unattach(void);
 	inline void attach(FGLAttachable *o);
-	inline bool sameAttachment(FGLAttach *a);
+	inline FGLAttachable *get() {return attachable;}
 
 	friend class FGLAttachable;
 };

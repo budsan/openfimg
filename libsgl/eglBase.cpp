@@ -824,48 +824,67 @@ void fglSetDefaultBuffers(FGLContext *gl)
 }
 #endif
 
-void fglSetCurrentBuffers(FGLContext *gl)
+void fglSetCurrentBuffers(FGLContext *ctx)
 {
-	FGLSurface *color   = gl->framebuffer.curBuffer.color;
-	unsigned int width  = gl->framebuffer.curBuffer.width;
-	unsigned int height = gl->framebuffer.curBuffer.height;
-	unsigned int stride = gl->framebuffer.curBuffer.stride;
-	unsigned int format = gl->framebuffer.curBuffer.format;
+	FGLSurface *color   = ctx->framebuffer.curBuffer.color;
+	unsigned int width  = ctx->framebuffer.curBuffer.width;
+	unsigned int height = ctx->framebuffer.curBuffer.height;
+	unsigned int stride = ctx->framebuffer.curBuffer.stride;
+	unsigned int format = ctx->framebuffer.curBuffer.format;
 
-	FGLSurface *zbuf         = gl->framebuffer.curBuffer.depth;
-	unsigned int depthFormat = gl->framebuffer.curBuffer.depthFormat;
+	FGLSurface *zbuf         = ctx->framebuffer.curBuffer.depth;
+	unsigned int depthFormat = ctx->framebuffer.curBuffer.depthFormat;
 
-	gl->surface.draw = color;
-	gl->surface.width = width;
-	gl->surface.stride = stride;
-	gl->surface.height = height;
-	gl->surface.format = format;
+	ctx->surface.draw = color;
+	ctx->surface.width = width;
+	ctx->surface.stride = stride;
+	ctx->surface.height = height;
+	ctx->surface.format = format;
 
 	//TODO: SET TO FIMG EXTERNAL SURFACE CORRECTLY
-	if (color)
-	{
-		fimgSetFrameBufSize(gl->fimg, stride, height);
-		fimgSetFrameBufParams(gl->fimg, 1, 0, 255, (fimgColorMode)format);
-		fimgSetColorBufBaseAddr(gl->fimg, color->paddr);
+	if (color) {
+		fimgSetFrameBufSize(ctx->fimg, stride, height);
+		fimgSetFrameBufParams(ctx->fimg, 1, 0, 255, (fimgColorMode)format);
+		fimgSetColorBufBaseAddr(ctx->fimg, color->paddr);
 	}
-	else
-	{
+	else {
 		//DISABLE WRITING
 	}
 
+	//Storing depth/stencil buffer and format
 	if (!zbuf || !depthFormat) {
-		//TODO: Disable depth AND stencil buffer in some way
-		//mask depth and stencil
-		gl->surface.depth = 0;
-		gl->surface.depthFormat = 0;
+		ctx->surface.depth = 0;
+		ctx->surface.depthFormat = 0;
 	}
 	else {
-		//TODO: Disable depth OR stencil buffer
-		//mask depth or stencil depending of depthFormat
-		fimgSetZBufBaseAddr(gl->fimg, zbuf->paddr);
-		gl->surface.depth = zbuf;
-		gl->surface.depthFormat = depthFormat;
+		fimgSetZBufBaseAddr(ctx->fimg, zbuf->paddr);
+		ctx->surface.depth = zbuf;
+		ctx->surface.depthFormat = depthFormat;
 	}
+
+	//Enable/Disable depth test and writing
+	if (ctx->surface.depthFormat & 0xff) {
+		fimgSetZBufWriteMask(ctx->fimg, ctx->perFragment.mask.depth);
+		fimgSetDepthEnable(ctx->fimg, ctx->enable.depthTest);
+	}
+	else {
+		fimgSetZBufWriteMask(ctx->fimg, 0);
+		fimgSetDepthEnable(ctx->fimg, 0);
+	}
+
+	//Enable/Disable stencil test and writing
+	if (ctx->surface.depthFormat >> 8) {
+		fimgSetStencilBufWriteMask(ctx->fimg, 0, ctx->perFragment.mask.stencil);
+		fimgSetStencilBufWriteMask(ctx->fimg, 1, ctx->perFragment.mask.stencil);
+		fimgSetStencilEnable(ctx->fimg, ctx->enable.stencilTest);
+	}
+	else {
+		fimgSetStencilBufWriteMask(ctx->fimg, 0, 0);
+		fimgSetStencilBufWriteMask(ctx->fimg, 1, 0);
+		fimgSetStencilEnable(ctx->fimg, 0);
+	}
+
+	fimgSetZBufBaseAddr(ctx->fimg, ctx->surface.depth->paddr);
 }
 
 struct FGLRenderSurface

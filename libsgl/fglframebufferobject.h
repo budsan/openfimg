@@ -70,9 +70,9 @@ struct FGLFramebuffer
 
 	~FGLFramebuffer() {}
 
-	//Used due to GL_DEPTH_STENCIL_OES
+	//Used for to GL_DEPTH_STENCIL_OES
 	inline bool IsDepthStencilSameAttachment() {
-		return depthAttach.sameAttachment(&stencilAttach);
+		return depthAttach.get() == stencilAttach.get();
 	}
 };
 

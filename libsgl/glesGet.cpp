@@ -1101,10 +1101,10 @@ GL_API GLboolean GL_APIENTRY glIsEnabled (GLenum cap)
 		return fimgGetFragmentState(ctx->fimg, FIMG_SCISSOR_TEST);
 		break;
 	case GL_STENCIL_TEST:
-		return fimgGetFragmentState(ctx->fimg, FIMG_STENCIL_TEST);
+		return ctx->enable.stencilTest? GL_TRUE : GL_FALSE;
 		break;
 	case GL_DEPTH_TEST:
-		return fimgGetFragmentState(ctx->fimg, FIMG_DEPTH_TEST);
+		return ctx->enable.depthTest? GL_TRUE : GL_FALSE;
 		break;
 	case GL_BLEND:
 		return fimgGetFragmentState(ctx->fimg, FIMG_BLEND);

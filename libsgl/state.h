@@ -247,6 +247,15 @@ struct FGLClearState {
 		red(0), green(0), blue(0), alpha(0), depth(1.0), stencil(0) {};
 };
 
+union FGLEnableState {
+	unsigned bits;
+	struct {
+		unsigned depthTest   :1;
+		unsigned stencilTest :1;
+		unsigned             :30;
+	};
+};
+
 struct FGLContext {
 	/* HW state */
 	fimgContext *fimg;
@@ -267,6 +276,7 @@ struct FGLContext {
 	FGLPerFragmentState perFragment;
 	FGLClearState clear;
 	FGLTexture *busyTexture[FGL_MAX_TEXTURE_UNITS];
+	FGLEnableState enable;
 	/* EGL state */
 	FGLEGLState egl;
 	FGLSurfaceState surface;
@@ -278,6 +288,8 @@ struct FGLContext {
 		fimg(fctx), activeTexture(0), clientActiveTexture(0), matrix(),
 		unpackAlignment(4), packAlignment(4), egl(), surface()
 	{
+		enable.bits = 0;
+
 		memcpy(vertex, defaultVertex, (4 + FGL_MAX_TEXTURE_UNITS) * sizeof(FGLvec4f));
 		for (int i = 0; i < FGL_MAX_TEXTURE_UNITS; ++i)
 			busyTexture[i] = 0;

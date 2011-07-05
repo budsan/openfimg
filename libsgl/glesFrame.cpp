@@ -647,11 +647,6 @@ inline void FGLAttach::attach(FGLAttachable *o)
 	o->attach(this);
 }
 
-inline bool FGLAttach::sameAttachment(FGLAttach *a)
-{
-	return a->attachable == this->attachable;
-}
-
 FGLAttachable::FGLAttachable() : list(NULL) {}
 FGLAttachable::~FGLAttachable()
 {

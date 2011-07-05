@@ -1583,10 +1583,14 @@ static inline void fglSet(GLenum cap, bool state)
 		fimgSetAlphaEnable(ctx->fimg, state);
 		break;
 	case GL_STENCIL_TEST:
-		fimgSetStencilEnable(ctx->fimg, state);
+		ctx->enable.stencilTest = !!state;
+		if (ctx->surface.depthFormat >> 8)
+			fimgSetStencilEnable(ctx->fimg, ctx->enable.stencilTest);
 		break;
 	case GL_DEPTH_TEST:
-		fimgSetDepthEnable(ctx->fimg, state);
+		ctx->enable.depthTest = !!state;
+		if (ctx->surface.depthFormat & 0xff)
+			fimgSetDepthEnable(ctx->fimg, ctx->enable.depthTest);
 		break;
 	case GL_BLEND:
 		fimgSetBlendEnable(ctx->fimg, state);
