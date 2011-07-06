@@ -27,11 +27,7 @@
 #include "fglattach.h"
 
 struct FGLTexture : public FGLAttachable {
-	/* Memory surface */
-	FGLSurface	*surface;
 	/* GL state */
-	GLint		width;
-	GLint		height;
 	GLboolean	compressed;
 	GLint		levels;
 	GLint		maxLevel;
@@ -48,18 +44,16 @@ struct FGLTexture : public FGLAttachable {
 	/* HW state */
 	fimgTexture	*fimg;
 	uint32_t	fglFormat;
-	uint32_t	bpp;
 	bool		convert;
 	bool		valid;
 	bool		dirty;
-	bool		swap;
 
 	FGLTexture() :
-		surface(0), compressed(0), levels(0), maxLevel(0), format(GL_RGB),
+		compressed(0), levels(0), maxLevel(0), format(GL_RGB),
 		type(GL_UNSIGNED_BYTE), minFilter(GL_NEAREST_MIPMAP_LINEAR),
 		magFilter(GL_LINEAR), sWrap(GL_REPEAT), tWrap(GL_REPEAT),
 		genMipmap(0), useMipmap(GL_TRUE), eglImage(0),
-		fimg(NULL), valid(false), dirty(false), swap(false)
+		fimg(NULL), valid(false), dirty(false)
 	{
 		fimg = fimgCreateTexture();
 		if(fimg == NULL)
@@ -72,8 +66,6 @@ struct FGLTexture : public FGLAttachable {
 	{
 		if(!isValid())
 			return;
-
-		delete surface;
 
 		fimgDestroyTexture(fimg);
 	}

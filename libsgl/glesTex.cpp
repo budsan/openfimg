@@ -124,20 +124,26 @@ GL_API void GL_APIENTRY glBindTexture (GLenum target, GLuint texture)
 }
 
 static int fglGetFormatInfo(GLenum format, GLenum type,
-					unsigned *bpp, bool *conv, bool *swap)
+		unsigned *bpp, bool *conv, bool *swap, unsigned *attachMask, int *fbFormat)
 {
 	*conv = 0;
 	*swap = 0;
+	*attachMask = 0;
+	*fbFormat = 0;
 	switch (type) {
 	case GL_UNSIGNED_BYTE:
 		switch (format) {
 		case GL_RGB: // Needs conversion
 			*conv = 1;
 			*bpp = 4;
+			*attachMask = FGL_COLOR0_ATTACHABLE;
+			*fbFormat   = FGPF_COLOR_MODE_0888;
 			return FGTU_TSTA_TEXTURE_FORMAT_8888;
 		case GL_RGBA: // Needs swapping in pixel shader
 			*swap = 1;
 			*bpp = 4;
+			*attachMask = FGL_COLOR0_ATTACHABLE;
+			*fbFormat   = FGPF_COLOR_MODE_8888;
 			return FGTU_TSTA_TEXTURE_FORMAT_8888;
 		case GL_ALPHA:
 			*bpp = 1;
@@ -154,16 +160,22 @@ static int fglGetFormatInfo(GLenum format, GLenum type,
 		if (format != GL_RGB)
 			return -1;
 		*bpp = 2;
+		*attachMask = FGL_COLOR0_ATTACHABLE;
+		*fbFormat   = FGPF_COLOR_MODE_565;
 		return FGTU_TSTA_TEXTURE_FORMAT_565;
 	case GL_UNSIGNED_SHORT_4_4_4_4:
 		if (format != GL_RGBA)
 			return -1;
 		*bpp = 2;
+		*attachMask = FGL_COLOR0_ATTACHABLE;
+		*fbFormat   = FGPF_COLOR_MODE_4444;
 		return FGTU_TSTA_TEXTURE_FORMAT_4444;
 	case GL_UNSIGNED_SHORT_5_5_5_1:
 		if (format != GL_RGBA)
 			return -1;
 		*bpp = 2;
+		*attachMask = FGL_COLOR0_ATTACHABLE;
+		*fbFormat   = FGPF_COLOR_MODE_1555;
 		return FGTU_TSTA_TEXTURE_FORMAT_1555;
 	default:
 		return -1;
@@ -692,7 +704,9 @@ GL_API void GL_APIENTRY glTexImage2D (GLenum target, GLint level,
 	unsigned bpp;
 	bool convert;
 	bool swap;
-	int fglFormat = fglGetFormatInfo(format, type, &bpp, &convert, &swap);
+	unsigned attachMask;
+	int fbFormat;
+	int fglFormat = fglGetFormatInfo(format, type, &bpp, &convert, &swap, &attachMask, &fbFormat);
 	if (fglFormat < 0) {
 		setError(GL_INVALID_VALUE);
 		return;
@@ -708,14 +722,18 @@ GL_API void GL_APIENTRY glTexImage2D (GLenum target, GLint level,
 
 	// (Re)allocate the texture
 	if (!obj->surface) {
+
 		obj->width = width;
 		obj->height = height;
+		obj->attachmentMask = attachMask;
+		obj->fglFbFormat = fbFormat;
+		obj->bpp = bpp;
+		obj->swap = swap;
+
 		obj->format = format;
 		obj->type = type;
 		obj->fglFormat = fglFormat;
-		obj->bpp = bpp;
 		obj->convert = convert;
-		obj->swap = swap;
 
 		// Calculate mipmaps
 		unsigned size = fglCalculateMipmaps(obj, width, height, bpp);

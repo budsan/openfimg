@@ -8,39 +8,20 @@
 #include <GLES/gl.h>
 #include <GLES/glext.h>
 
-#define FGL_COLOR0_ATTACHABLE  (1<<0)
-#define FGL_DEPTH_ATTACHABLE   (1<<1)
-#define FGL_STENCIL_ATTACHABLE (1<<2)
-
 struct FGLRenderbuffer : public FGLAttachable
 {
-	FGLSurface	*surface;
-	GLint		width;
-	GLint		height;
-	GLenum		format;
-
-	unsigned	attachment;
-	uint32_t	fglFormat;
-	uint32_t	bpp;
-	bool		swap;
-
-	FGLRenderbuffer() : surface(0), width(0),
-		height(0), format(GL_RGB), attachment(0) {}
-
-	~FGLRenderbuffer()
-	{
-		delete surface;
-	}
+	GLenum format;
+	FGLRenderbuffer() : format(GL_RGBA) {}
 };
 
-void fglColorAttachDeleted(void *obj);
-void fglColorAttachChanged(void *obj);
+void fglColorAttachDeleted(FGLFramebuffer *fbo);
+void fglColorAttachChanged(FGLFramebuffer *fbo);
 
-void fglColorDepthDeleted(void *obj);
-void fglColorDepthChanged(void *obj);
+void fglColorDepthDeleted(FGLFramebuffer *fbo);
+void fglColorDepthChanged(FGLFramebuffer *fbo);
 
-void fglColorStencilDeleted(void *obj);
-void fglColorStencilChanged(void *obj);
+void fglColorStencilDeleted(FGLFramebuffer *fbo);
+void fglColorStencilChanged(FGLFramebuffer *fbo);
 
 struct FGLFramebuffer
 {
@@ -49,6 +30,7 @@ struct FGLFramebuffer
 	unsigned stencilName;
 
 	enum { NONE = 0, TEXTURE, RENDERBUFFER };
+
 	unsigned colorType;
 	unsigned depthType;
 	unsigned stencilType;
