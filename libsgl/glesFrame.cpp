@@ -15,19 +15,19 @@ FGLObjectManager<FGLFramebuffer, FGL_MAX_FRAMEBUFFER_OBJECTS> fglFramebufferObje
 FGLObjectManager<FGLRenderbuffer, FGL_MAX_RENDERBUFFER_OBJECTS> fglRenderbufferObjects;
 extern FGLObjectManager<FGLTexture, FGL_MAX_TEXTURE_OBJECTS> fglTextureObjects;
 
-inline void fglSetDefaultFramebuffer(FGLContext *gl)
+inline void fglSetDefaultFramebuffer(FGLContext *ctx)
 {
-	memcpy(&gl->framebuffer.curBuffer, &gl->framebuffer.defBuffer, sizeof(FGLSurfaceData));
-	gl->framebuffer.externalBufferInUse = false;
-	gl->framebuffer.status = GL_FRAMEBUFFER_COMPLETE_OES;
-	fglSetCurrentBuffers(gl);
+	memcpy(&ctx->framebuffer.curBuffer, &ctx->framebuffer.defBuffer, sizeof(FGLSurfaceData));
+	ctx->framebuffer.externalBufferInUse = false;
+	ctx->framebuffer.status = GL_FRAMEBUFFER_COMPLETE_OES;
+	fglSetCurrentBuffers(ctx);
 }
 
 bool fglIsFramebufferAttachmentComplete(FGLAttach *attach, unsigned mask)
 {
 	if (!attach->isAttached()) return true;
-	FGLAttachable *att = attach->get();
 
+	FGLAttachable *att = attach->get();
 	if (att->width == 0 || att->height == 0) {
 		return false;
 	}
@@ -47,8 +47,7 @@ void fglGetFramebufferAttachmentDimensions(FGLAttach *attach, unsigned &w, unsig
 		h = att->height;
 	}
 	else {
-		w = 0;
-		h = 0;
+		h = w = 0;
 	}
 }
 
@@ -76,31 +75,36 @@ void fglUpdateFramebufferStatus(FGLContext *ctx, FGLFramebuffer* fbo)
 		unsigned w = 0, h = 0;
 		fglGetFramebufferAttachmentDimensions(atts[i].attach, w, h);
 
-		if ( w  == 0 ) continue;
+		if (  w == 0 ) continue;
 		if ( fw == 0 ) {
 			fw = w;
 			fh = h;
 		}
 		else {
 			if (fw != w || fh != h) {
-				// exists an attachment with sizes different from the others
+				// an attachment have different sizes
 				ctx->framebuffer.status = GL_FRAMEBUFFER_INCOMPLETE_DIMENSIONS_OES;
 				return;
 			}
 		}
 	}
 
-	// if fw still 0 means there is no attachment
+	// if fw still being 0 it means there is no attachment
 	if ( fw == 0 ) {
 		ctx->framebuffer.status = GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT_OES;
 		return;
 	}
 
-	//TODO: Support GL_DEPTH_STENCIL_OES
 	FGLSurfaceData  &curr = ctx->framebuffer.curBuffer;
 	if(fbo->depthAttach.isAttached() && fbo->stencilAttach.isAttached()) {
-		ctx->framebuffer.status = GL_FRAMEBUFFER_UNSUPPORTED_OES;
-		return;
+		if (fbo->IsDepthStencilSameAttachment()) { //GL_DEPTH_STENCIL_OES
+			curr.depth       = fbo->depthAttach.get()->surface;
+			curr.depthFormat = fbo->depthAttach.get()->fglFbFormat;
+		}
+		else  {
+			ctx->framebuffer.status = GL_FRAMEBUFFER_UNSUPPORTED_OES;
+			return;
+		}
 	}
 	else if( fbo->depthAttach.isAttached() && !fbo->stencilAttach.isAttached()) {
 		curr.depth       = fbo->depthAttach.get()->surface;
@@ -122,8 +126,16 @@ void fglUpdateFramebufferStatus(FGLContext *ctx, FGLFramebuffer* fbo)
 	else {
 		curr.color  = 0;
 		curr.format = 0;
+		curr.stride = 0;
 	}
 
+	curr.stride = fw;
+	curr.width  = fw;
+	curr.height = fh;
+
+	glFinish();
+
+	ctx->framebuffer.externalBufferInUse = true;
 	ctx->framebuffer.status = GL_FRAMEBUFFER_COMPLETE_OES; //hurray!
 	fglSetCurrentBuffers(ctx);
 }
@@ -149,13 +161,13 @@ static int fglGetRenderbufferFormatInfo(GLenum format, unsigned *bpp, unsigned *
 	case GL_RGBA:
 	case GL_RGBA8_OES:// OPTIONAL
 		*bpp = 4;
-		//*swap = 1;
+		*swap = 1;
 		*attachment = FGL_COLOR0_ATTACHABLE;
 		return FGPF_COLOR_MODE_8888;
 	case GL_RGB:
 	case GL_RGB8_OES: // OPTIONAL
 		*bpp = 4;
-		//*swap = 1;
+		*swap = 1;
 		*attachment = FGL_COLOR0_ATTACHABLE;
 		return FGPF_COLOR_MODE_0888;
 	case GL_DEPTH_COMPONENT16_OES: //REQUIRED
@@ -166,9 +178,7 @@ static int fglGetRenderbufferFormatInfo(GLenum format, unsigned *bpp, unsigned *
 	case GL_DEPTH_COMPONENT32_OES: //OPTIONAL
 		return -1;
 	case GL_STENCIL_INDEX1_OES: //OPTIONAL
-		//return (1<<8);
 	case GL_STENCIL_INDEX4_OES: //OPTIONAL
-		//return (4<<8)-1;
 	case GL_STENCIL_INDEX8_OES: //OPTIONAL
 		*bpp = 4;
 		*attachment = FGL_STENCIL_ATTACHABLE;
@@ -573,7 +583,6 @@ GL_API void GL_APIENTRY glFramebufferRenderbufferOES(GLenum target, GLenum attac
 		return;
 	}
 
-	//WE KNOW FOR SURE FB IS NOT NULL
 	FGLFramebuffer *fb = ctx->framebuffer.binding.get();
 	FGLAttach *attach = NULL;
 	unsigned *name;
@@ -621,8 +630,6 @@ GL_API void GL_APIENTRY glFramebufferTexture2DOES (GLenum target, GLenum attachm
 		setError(GL_INVALID_OPERATION);
 		return;
 	}
-
-
 
 	FGLTexture *tx = NULL;
 	if (texture != 0) {

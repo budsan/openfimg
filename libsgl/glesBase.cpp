@@ -718,10 +718,14 @@ GL_API void GL_APIENTRY glDrawArrays (GLenum mode, GLint first, GLsizei count)
 		setError(GL_INVALID_VALUE);
 		return;
 	}
-
-	fimgArray arrays[4 + FGL_MAX_TEXTURE_UNITS];
 	FGLContext *ctx = getContext();
 
+	if (!ctx->framebuffer.isComplete()) {
+		setError(GL_INVALID_FRAMEBUFFER_OPERATION_OES);
+		return;
+	}
+
+	fimgArray arrays[4 + FGL_MAX_TEXTURE_UNITS];
 	for(int i = 0; i < (4 + FGL_MAX_TEXTURE_UNITS); ++i) {
 		if(ctx->array[i].enabled) {
 			arrays[i].pointer	= ctx->array[i].pointer;
@@ -796,9 +800,14 @@ GL_API void GL_APIENTRY glDrawElements (GLenum mode, GLsizei count, GLenum type,
 							const GLvoid *indices)
 {
 	uint32_t fglMode;
-	fimgArray arrays[4 + FGL_MAX_TEXTURE_UNITS];
-	FGLContext *ctx = getContext();
 
+	FGLContext *ctx = getContext();
+	if (!ctx->framebuffer.isComplete()) {
+		setError(GL_INVALID_FRAMEBUFFER_OPERATION_OES);
+		return;
+	}
+
+	fimgArray arrays[4 + FGL_MAX_TEXTURE_UNITS];
 	if(ctx->elementArrayBuffer.isBound())
 		indices = ctx->elementArrayBuffer.get()->getAddress(indices);
 
@@ -901,6 +910,11 @@ GL_API void GL_APIENTRY glDrawElements (GLenum mode, GLsizei count, GLenum type,
 GL_API void GL_APIENTRY glDrawTexfOES (GLfloat x, GLfloat y, GLfloat z, GLfloat width, GLfloat height)
 {
 	FGLContext *ctx = getContext();
+	if (!ctx->framebuffer.isComplete()) {
+		setError(GL_INVALID_FRAMEBUFFER_OPERATION_OES);
+		return;
+	}
+
 	GLboolean arrayEnabled[4 + FGL_MAX_TEXTURE_UNITS];
 	GLfloat vertices[3*4];
 	GLfloat texcoords[2][2*4];

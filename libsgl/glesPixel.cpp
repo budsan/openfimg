@@ -246,6 +246,11 @@ GL_API void GL_APIENTRY glReadPixels (GLint x, GLint y,
 				GLenum type, GLvoid *pixels)
 {
 	FGLContext *ctx = getContext();
+	if (!ctx->framebuffer.isComplete()) {
+		setError(GL_INVALID_FRAMEBUFFER_OPERATION_OES);
+		return;
+	}
+
 	FGLSurface *draw = ctx->surface.draw;
 
 	if (!draw || !draw->vaddr) {
