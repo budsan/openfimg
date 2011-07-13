@@ -197,7 +197,8 @@ struct FGLFramebufferState
 	FGLFramebufferObjectBinding binding;
 
 	FGLFramebufferState() :
-		defBuffer() , externalBufferInUse(false), binding() {};
+		defBuffer() , externalBufferInUse(false),
+		status(GL_FRAMEBUFFER_COMPLETE_OES), binding() {};
 
 	inline bool isComplete() {
 		return status == GL_FRAMEBUFFER_COMPLETE_OES;

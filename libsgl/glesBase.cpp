@@ -718,6 +718,7 @@ GL_API void GL_APIENTRY glDrawArrays (GLenum mode, GLint first, GLsizei count)
 		setError(GL_INVALID_VALUE);
 		return;
 	}
+
 	FGLContext *ctx = getContext();
 
 	if (!ctx->framebuffer.isComplete()) {
@@ -789,10 +790,12 @@ GL_API void GL_APIENTRY glDrawArrays (GLenum mode, GLint first, GLsizei count)
 #ifndef FIMG_USE_VERTEX_BUFFER
 	fimgDrawArrays(ctx->fimg, fglMode, arrays, first, count);
 #else
-	if (count <= 24)
+	if (count <= 24) {
 		fimgDrawArraysBuffered(ctx->fimg, fglMode, arrays, first, count);
-	else
+	}
+	else {
 		fimgDrawArrays(ctx->fimg, fglMode, arrays, first, count);
+	}
 #endif
 }
 

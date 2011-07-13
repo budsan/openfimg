@@ -688,7 +688,8 @@ static inline uint32_t getFillDepth(FGLContext *ctx,
 
 static void fglClear(FGLContext *ctx, GLbitfield mode)
 {
-	FUNCTION_TRACER;
+	//FUNCTION_TRACER;
+
 	FGLSurface *draw = ctx->surface.draw;
 	uint32_t stride = ctx->surface.stride;
 	bool lineByLine = false;

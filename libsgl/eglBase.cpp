@@ -798,9 +798,9 @@ void fglSetCurrentBuffers(FGLContext *ctx)
 
 	//Set color buffer and format and set color mask
 	if (surf.draw) {
-		fimgSetFrameBufSize(ctx->fimg, curr.stride, curr.height);
-		fimgSetFrameBufParams(ctx->fimg, 1, 0, 255, (fimgColorMode)curr.format);
-		fimgSetColorBufBaseAddr(ctx->fimg, curr.color->paddr);
+		fimgSetFrameBufSize(ctx->fimg, surf.stride, surf.height);
+		fimgSetFrameBufParams(ctx->fimg, 1, 0, 255, (fimgColorMode)surf.format);
+		fimgSetColorBufBaseAddr(ctx->fimg, surf.draw->paddr);
 		fimgSetColorBufWriteMask(ctx->fimg,
 			mask.red, mask.green, mask.green, mask.alpha);
 	}
@@ -813,7 +813,7 @@ void fglSetCurrentBuffers(FGLContext *ctx)
 		surf.depth = curr.depth;
 		surf.depthFormat = curr.depthFormat;
 
-		fimgSetZBufBaseAddr(ctx->fimg, curr.depth->paddr);
+		fimgSetZBufBaseAddr(ctx->fimg, surf.depth->paddr);
 	}
 	else {
 		surf.depth = 0;

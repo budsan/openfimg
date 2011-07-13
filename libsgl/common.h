@@ -42,13 +42,15 @@
 #define likely(x)       __builtin_expect((x),1)
 #define unlikely(x)     __builtin_expect((x),0)
 
+#include <cutils/log.h>
+
 #define FUNC_UNIMPLEMENTED \
 	static int flag = 0; \
 	if (!flag) \
 		LOGW("Application called unimplemented function: %s", __func__); \
 	flag = 1
 
-//#define TRACE_FUNCTIONS
+#define TRACE_FUNCTIONS
 #ifdef TRACE_FUNCTIONS
 class FunctionTracer {
 	const char *name;

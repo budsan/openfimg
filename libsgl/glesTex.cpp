@@ -184,7 +184,7 @@ static int fglGetFormatInfo(GLenum format, GLenum type,
 
 static void fglGenerateMipmapsSW(FGLTexture *obj)
 {
- FUNCTION_TRACER;
+ //FUNCTION_TRACER;
 	int level = 0;
 
 	int w = obj->width;
@@ -332,7 +332,7 @@ static void fglGenerateMipmapsSW(FGLTexture *obj)
 
 static int fglGenerateMipmapsG2D(FGLTexture *obj, unsigned int format)
 {
- FUNCTION_TRACER;
+ //FUNCTION_TRACER;
 	int fd;
 	struct s3c_g2d_req req;
 
@@ -395,7 +395,7 @@ static int fglGenerateMipmapsG2D(FGLTexture *obj, unsigned int format)
 
 static void fglGenerateMipmaps(FGLTexture *obj)
 {
- FUNCTION_TRACER;
+ //FUNCTION_TRACER;
 	/* Handle cases supported by G2D hardware */
 	switch (obj->fglFormat) {
 	case FGTU_TSTA_TEXTURE_FORMAT_565:
@@ -458,7 +458,7 @@ static size_t fglCalculateMipmaps(FGLTexture *obj, unsigned int width,
 static void fglLoadTextureDirect(FGLTexture *obj, unsigned level,
 						const GLvoid *pixels)
 {
- FUNCTION_TRACER;
+ //FUNCTION_TRACER;
 	unsigned offset = fimgGetTexMipmapOffset(obj->fimg, level);
 
 	unsigned width = obj->width >> level;
@@ -477,7 +477,7 @@ static void fglLoadTextureDirect(FGLTexture *obj, unsigned level,
 static void fglLoadTexture(FGLTexture *obj, unsigned level,
 		    const GLvoid *pixels, unsigned alignment)
 {
- FUNCTION_TRACER;
+ //FUNCTION_TRACER;
 	unsigned offset = fimgGetTexMipmapOffset(obj->fimg, level);
 
 	unsigned width = obj->width >> level;
@@ -514,7 +514,7 @@ static inline uint16_t fglPackLA88(uint8_t l, uint8_t a)
 static void fglConvertTexture(FGLTexture *obj, unsigned level,
 			const GLvoid *pixels, unsigned alignment)
 {
- FUNCTION_TRACER;
+ //FUNCTION_TRACER;
 	unsigned offset = fimgGetTexMipmapOffset(obj->fimg, level);
 
 	unsigned width = obj->width >> level;
@@ -594,7 +594,7 @@ GL_API void GL_APIENTRY glTexImage2D (GLenum target, GLint level,
 	GLint internalformat, GLsizei width, GLsizei height, GLint border,
 	GLenum format, GLenum type, const GLvoid *pixels)
 {
- FUNCTION_TRACER;
+ //FUNCTION_TRACER;
 	// Check conditions required by specification
 	if (target != GL_TEXTURE_2D) {
 		setError(GL_INVALID_ENUM);
@@ -782,7 +782,7 @@ static void fglLoadTexturePartial(FGLTexture *obj, unsigned level,
 			const GLvoid *pixels, unsigned alignment,
 			unsigned x, unsigned y, unsigned w, unsigned h)
 {
- FUNCTION_TRACER;
+ //FUNCTION_TRACER;
 	unsigned offset = fimgGetTexMipmapOffset(obj->fimg, level);
 
 	unsigned width = obj->width >> level;
@@ -811,7 +811,7 @@ static void fglConvertTexturePartial(FGLTexture *obj, unsigned level,
 			const GLvoid *pixels, unsigned alignment,
 			unsigned x, unsigned y, unsigned w, unsigned h)
 {
- FUNCTION_TRACER;
+ //FUNCTION_TRACER;
 	unsigned offset = fimgGetTexMipmapOffset(obj->fimg, level);
 
 	unsigned width = obj->width >> level;
@@ -900,7 +900,7 @@ GL_API void GL_APIENTRY glTexSubImage2D (GLenum target, GLint level,
 		GLint xoffset, GLint yoffset, GLsizei width, GLsizei height,
 		GLenum format, GLenum type, const GLvoid *pixels)
 {
- FUNCTION_TRACER;
+ //FUNCTION_TRACER;
 	FGLContext *ctx = getContext();
 	FGLTexture *obj =
 		ctx->texture[ctx->activeTexture].getTexture();
