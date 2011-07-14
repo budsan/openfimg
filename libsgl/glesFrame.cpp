@@ -17,8 +17,11 @@ extern FGLObjectManager<FGLTexture, FGL_MAX_TEXTURE_OBJECTS> fglTextureObjects;
 
 inline void fglSetDefaultFramebuffer(FGLContext *ctx)
 {
-	FUNCTION_TRACER;
+	//FUNCTION_TRACER;
+
 	memcpy(&ctx->framebuffer.curBuffer, &ctx->framebuffer.defBuffer, sizeof(FGLSurfaceData));
+
+	glFinish();
 	ctx->framebuffer.externalBufferInUse = false;
 	ctx->framebuffer.status = GL_FRAMEBUFFER_COMPLETE_OES;
 	fglSetCurrentBuffers(ctx);
@@ -54,7 +57,7 @@ void fglGetFramebufferAttachmentDimensions(FGLAttach *attach, unsigned &w, unsig
 
 void fglUpdateFramebufferStatus(FGLContext *ctx, FGLFramebuffer* fbo)
 {
-	FUNCTION_TRACER;
+	//FUNCTION_TRACER;
 	struct {
 		FGLAttach *attach;
 		unsigned   mask;
@@ -203,7 +206,7 @@ GL_API GLboolean GL_APIENTRY glIsRenderbufferOES (GLuint renderbuffer)
 
 GL_API void GL_APIENTRY glBindRenderbufferOES (GLenum target, GLuint renderbuffer)
 {
-	FUNCTION_TRACER;
+	//FUNCTION_TRACER;
 	if(target != GL_RENDERBUFFER_OES) {
 		setError(GL_INVALID_ENUM);
 		return;
@@ -281,7 +284,7 @@ GL_API void GL_APIENTRY glGenRenderbuffersOES (GLsizei n, GLuint* renderbuffers)
 
 GL_API void GL_APIENTRY glRenderbufferStorageOES (GLenum target, GLenum internalformat, GLsizei width, GLsizei height)
 {
-	FUNCTION_TRACER;
+	//FUNCTION_TRACER;
 	if (target != GL_RENDERBUFFER_OES) {
 		setError(GL_INVALID_ENUM);
 		return;
@@ -454,7 +457,7 @@ GL_API GLboolean GL_APIENTRY glIsFramebufferOES (GLuint framebuffer)
 
 GL_API void GL_APIENTRY glBindFramebufferOES (GLenum target, GLuint framebuffer)
 {
-	FUNCTION_TRACER;
+	//FUNCTION_TRACER;
 	if(target != GL_FRAMEBUFFER_OES) {
 		setError(GL_INVALID_ENUM);
 		return;
@@ -492,7 +495,7 @@ GL_API void GL_APIENTRY glBindFramebufferOES (GLenum target, GLuint framebuffer)
 
 GL_API void GL_APIENTRY glDeleteFramebuffersOES (GLsizei n, const GLuint* framebuffers)
 {
-	FUNCTION_TRACER;
+	//FUNCTION_TRACER;
 	unsigned name;
 
 	if(n <= 0)
@@ -556,7 +559,7 @@ GL_API GLenum GL_APIENTRY glCheckFramebufferStatusOES (GLenum target)
 
 GL_API void GL_APIENTRY glFramebufferRenderbufferOES(GLenum target, GLenum attachment, GLenum renderbuffertarget, GLuint renderbuffer)
 {
-	FUNCTION_TRACER;
+	//FUNCTION_TRACER;
 	if(target != GL_FRAMEBUFFER_OES) {
 		setError(GL_INVALID_OPERATION);
 		return;
@@ -632,7 +635,7 @@ GL_API void GL_APIENTRY glFramebufferRenderbufferOES(GLenum target, GLenum attac
 
 GL_API void GL_APIENTRY glFramebufferTexture2DOES (GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level)
 {
-	FUNCTION_TRACER;
+	//FUNCTION_TRACER;
 	if(target != GL_FRAMEBUFFER_OES) {
 		setError(GL_INVALID_OPERATION);
 		return;
