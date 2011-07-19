@@ -1122,7 +1122,6 @@ GL_API void GL_APIENTRY glViewport (GLint x, GLint y, GLsizei width, GLsizei hei
 	ctx->viewport.height = height;
 
 	fimgSetViewportParams(ctx->fimg, x, y, width, height);
-	fimgSetViewportParams(ctx->fimg, x, y, width, height);
 }
 
 /**
