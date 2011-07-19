@@ -82,6 +82,8 @@ struct FGLTexture : public FGLAttachable {
 
 		return levels == ((1 << (maxLevel + 1)) - 1);
 	}
+
+	void updateAttachable();
 };
 
 typedef FGLObject<FGLTexture> FGLTextureObject;

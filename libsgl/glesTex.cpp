@@ -1782,3 +1782,23 @@ GL_API GLboolean GL_APIENTRY glIsTexture (GLuint texture)
 
 	return GL_TRUE;
 }
+
+GL_API void GL_APIENTRY glGenerateMipmapOES (GLenum target)
+{
+	if (target != GL_TEXTURE_2D) {
+		setError(GL_INVALID_ENUM);
+		return;
+	}
+
+	FGLContext *ctx = getContext();
+	FGLTexture *obj =
+		ctx->texture[ctx->activeTexture].getTexture();
+
+	fglGenerateMipmaps(obj);
+}
+
+void FGLTexture::updateAttachable()
+{
+	if (genMipmap)
+		fglGenerateMipmaps(this);
+}

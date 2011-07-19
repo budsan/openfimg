@@ -466,6 +466,7 @@ GL_API void GL_APIENTRY glBindFramebufferOES (GLenum target, GLuint framebuffer)
 	if(framebuffer == 0) {
 		FGLContext *ctx = getContext();
 		if (ctx->framebuffer.binding.isBound()) {
+			ctx->framebuffer.binding.get()->updateAttaches();
 			ctx->framebuffer.binding.unbind();
 			fglSetDefaultFramebuffer(ctx);
 		}
@@ -489,6 +490,10 @@ GL_API void GL_APIENTRY glBindFramebufferOES (GLenum target, GLuint framebuffer)
 		fglFramebufferObjects[framebuffer] = obj;
 	}
 
+	//This could be easier using some callback unbind
+	if (ctx->framebuffer.binding.isBound())
+		ctx->framebuffer.binding.get()->updateAttaches();
+
 	obj->bind(&ctx->framebuffer.binding);
 	fglUpdateFramebufferStatus(ctx,& obj->object);
 }
@@ -501,6 +506,9 @@ GL_API void GL_APIENTRY glDeleteFramebuffersOES (GLsizei n, const GLuint* frameb
 	if(n <= 0)
 		return;
 
+	FGLContext *ctx = getContext();
+	FGLFramebuffer *curr = ctx->framebuffer.binding.get();
+
 	do {
 		name = *framebuffers;
 		framebuffers++;
@@ -510,13 +518,17 @@ GL_API void GL_APIENTRY glDeleteFramebuffersOES (GLsizei n, const GLuint* frameb
 			continue;
 		}
 
-		delete (fglFramebufferObjects[name]);
+		//This could be CLEANER using callbacks, this is crappy
+		FGLFramebufferObject *obj = fglFramebufferObjects[name];
+		if (curr == &obj->object) curr->updateAttaches();
+
+		delete (obj);
 		fglFramebufferObjects.put(name);
 	} while (--n);
 
 	//Here we're checking if this some deleted framebuffer was bound
 	//If it was, we must set default framebuffer.
-	FGLContext *ctx = getContext();
+
 	if ( ctx->framebuffer.externalBufferInUse &&
 	    !ctx->framebuffer.binding.isBound()) {
 		fglSetDefaultFramebuffer(ctx);
@@ -781,11 +793,6 @@ GL_API void GL_APIENTRY glGetFramebufferAttachmentParameterivOES (GLenum target,
 	}
 }
 
-GL_API void GL_APIENTRY glGenerateMipmapOES (GLenum target)
-{
-	FUNC_UNIMPLEMENTED;
-}
-
 /*
 	Attach callbacks
 */
@@ -877,6 +884,7 @@ inline void FGLAttach::unattach(void)
 	if (!attachable)
 		return;
 
+	attachable->updateAttachable();
 	attachable->unattach(this);
 }
 

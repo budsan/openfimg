@@ -52,6 +52,12 @@ struct FGLFramebuffer
 	inline bool IsDepthStencilSameAttachment() {
 		return depthAttach.get() == stencilAttach.get();
 	}
+
+	inline void updateAttaches() {
+		colorAttach.updateAttachable();
+		depthAttach.updateAttachable();
+		stencilAttach.updateAttachable();
+	}
 };
 
 typedef FGLObject<FGLRenderbuffer> FGLRenderBufferObject;

@@ -35,6 +35,11 @@ public:
 
 	void deleted(void);
 	void changed(void);
+
+	//FBO notifies to attachable that it can do internal
+	//updates like GenMipmaps because of modifications.
+	virtual void updateAttachable() {};
+
 	inline void unattachAll(void);
 	inline void unattach(FGLAttach *a);
 	inline void attach(FGLAttach *a);
@@ -66,6 +71,10 @@ public:
 	inline void unattach(void);
 	inline void attach(FGLAttachable *o);
 	inline FGLAttachable *get() {return attachable;}
+
+	void updateAttachable() {
+		if(attachable) attachable->updateAttachable();
+	}
 
 	friend class FGLAttachable;
 };
