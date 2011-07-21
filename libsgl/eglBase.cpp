@@ -740,9 +740,9 @@ EGLAPI EGLBoolean EGLAPIENTRY eglGetConfigAttrib(EGLDisplay dpy, EGLConfig confi
 void fglSetColorBuffer(FGLContext *gl, FGLSurface *cbuf, unsigned int width,
 		unsigned int height, unsigned int stride, unsigned int format)
 {
-	FGLSurfaceData *s = &gl->framebuffer.defBuffer;
+	FGLSurfaceState *s = &gl->framebuffer.defBuffer;
 	{
-		s->color = cbuf;
+		s->draw = cbuf;
 		s->width = width;
 		s->height = height;
 		s->stride = stride;
@@ -751,9 +751,9 @@ void fglSetColorBuffer(FGLContext *gl, FGLSurface *cbuf, unsigned int width,
 
 	if (!gl->framebuffer.externalBufferInUse)
 	{
-		s = &gl->framebuffer.curBuffer;
+		s = &gl->surface;
 
-		s->color = cbuf;
+		s->draw = cbuf;
 		s->width = width;
 		s->height = height;
 		s->stride = stride;
@@ -764,7 +764,7 @@ void fglSetColorBuffer(FGLContext *gl, FGLSurface *cbuf, unsigned int width,
 void fglSetDepthBuffer(FGLContext *gl, FGLSurface *zbuf, unsigned int format)
 {
 
-	FGLSurfaceData *s = &gl->framebuffer.defBuffer;
+	FGLSurfaceState *s = &gl->framebuffer.defBuffer;
 	{
 		s->depth = zbuf;
 		s->depthFormat = format;
@@ -772,7 +772,7 @@ void fglSetDepthBuffer(FGLContext *gl, FGLSurface *zbuf, unsigned int format)
 
 	if (!gl->framebuffer.externalBufferInUse)
 	{
-		s = &gl->framebuffer.curBuffer;
+		s = &gl->surface;
 
 		s->depth = zbuf;
 		s->depthFormat = format;
@@ -781,20 +781,16 @@ void fglSetDepthBuffer(FGLContext *gl, FGLSurface *zbuf, unsigned int format)
 
 void fglSetReadBuffer(FGLContext *gl, FGLSurface *rbuf)
 {
-	gl->surface.read = rbuf;
+	gl->framebuffer.defBuffer.read = rbuf;
+
+	if (!gl->framebuffer.externalBufferInUse)
+		gl->surface.read = rbuf;
 }
 
 void fglSetCurrentBuffers(FGLContext *ctx)
 {
-	FGLSurfaceData  &curr = ctx->framebuffer.curBuffer;
 	FGLSurfaceState &surf = ctx->surface;
 	FGLMaskState    &mask = ctx->perFragment.mask;
-
-	surf.draw   = curr.color;
-	surf.width  = curr.width;
-	surf.stride = curr.stride;
-	surf.height = curr.height;
-	surf.format = curr.format;
 
 	//Set color buffer and format and set color mask
 	if (surf.draw) {
@@ -809,15 +805,8 @@ void fglSetCurrentBuffers(FGLContext *ctx)
 	}
 
 	//Save depth/stencil buffer and format
-	if (curr.depth && curr.depthFormat) {
-		surf.depth = curr.depth;
-		surf.depthFormat = curr.depthFormat;
-
+	if (surf.depth && surf.depthFormat) {
 		fimgSetZBufBaseAddr(ctx->fimg, surf.depth->paddr);
-	}
-	else {
-		surf.depth = 0;
-		surf.depthFormat = 0;
 	}
 
 	//Enable/Disable depth test and writing

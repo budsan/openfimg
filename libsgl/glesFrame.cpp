@@ -19,7 +19,7 @@ inline void fglSetDefaultFramebuffer(FGLContext *ctx)
 {
 	//FUNCTION_TRACER;
 
-	memcpy(&ctx->framebuffer.curBuffer, &ctx->framebuffer.defBuffer, sizeof(FGLSurfaceData));
+	memcpy(&ctx->surface, &ctx->framebuffer.defBuffer, sizeof(FGLSurfaceState));
 
 	glFinish();
 	ctx->framebuffer.externalBufferInUse = false;
@@ -27,9 +27,12 @@ inline void fglSetDefaultFramebuffer(FGLContext *ctx)
 	fglSetCurrentBuffers(ctx);
 }
 
-bool fglIsFramebufferAttachmentComplete(FGLAttach *attach, unsigned mask)
+bool fglIsFramebufferAttachmentComplete(FGLAttach *attach, unsigned mask, unsigned &w, unsigned &h)
 {
-	if (!attach->isAttached()) return true;
+	if (!attach->isAttached()) {
+		h = w = 0;
+		return true;
+	}
 
 	FGLAttachable *att = attach->get();
 	if (att->width == 0 || att->height == 0) {
@@ -40,19 +43,10 @@ bool fglIsFramebufferAttachmentComplete(FGLAttach *attach, unsigned mask)
 		return false;
 	}
 
-	return true;
-}
+	w = att->width;
+	h = att->height;
 
-void fglGetFramebufferAttachmentDimensions(FGLAttach *attach, unsigned &w, unsigned &h)
-{
-	if (attach->isAttached()) {
-		FGLAttachable *att = attach->get();
-		w = att->width;
-		h = att->height;
-	}
-	else {
-		h = w = 0;
-	}
+	return true;
 }
 
 void fglUpdateFramebufferStatus(FGLContext *ctx, FGLFramebuffer* fbo)
@@ -67,18 +61,13 @@ void fglUpdateFramebufferStatus(FGLContext *ctx, FGLFramebuffer* fbo)
 		{&fbo->stencilAttach, FGL_STENCIL_ATTACHABLE}
 	};
 
+	unsigned fw = 0, fh = 0;
 	for (unsigned int i = 0 ; i < 3; i++) {
-		if (!fglIsFramebufferAttachmentComplete(atts[i].attach, atts[i].mask)) {
+		unsigned w = 0, h = 0;
+		if (!fglIsFramebufferAttachmentComplete(atts[i].attach, atts[i].mask, w, h)) {
 			ctx->framebuffer.status = GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT_OES;
 			return;
 		}
-	}
-
-	unsigned fw = 0, fh = 0;
-	for (unsigned int i = 0 ; i < 3; i++)
-	{
-		unsigned w = 0, h = 0;
-		fglGetFramebufferAttachmentDimensions(atts[i].attach, w, h);
 
 		if (  w == 0 ) continue;
 		if ( fw == 0 ) {
@@ -100,11 +89,11 @@ void fglUpdateFramebufferStatus(FGLContext *ctx, FGLFramebuffer* fbo)
 		return;
 	}
 
-	FGLSurfaceData  &curr = ctx->framebuffer.curBuffer;
+	FGLSurfaceState &surf = ctx->surface;
 	if(fbo->depthAttach.isAttached() && fbo->stencilAttach.isAttached()) {
 		if (fbo->IsDepthStencilSameAttachment()) { //GL_DEPTH_STENCIL_OES
-			curr.depth       = fbo->depthAttach.get()->surface;
-			curr.depthFormat = fbo->depthAttach.get()->fglFbFormat;
+			surf.depth       = fbo->depthAttach.get()->surface;
+			surf.depthFormat = fbo->depthAttach.get()->fglFbFormat;
 		}
 		else  {
 			ctx->framebuffer.status = GL_FRAMEBUFFER_UNSUPPORTED_OES;
@@ -112,30 +101,30 @@ void fglUpdateFramebufferStatus(FGLContext *ctx, FGLFramebuffer* fbo)
 		}
 	}
 	else if( fbo->depthAttach.isAttached() && !fbo->stencilAttach.isAttached()) {
-		curr.depth       = fbo->depthAttach.get()->surface;
-		curr.depthFormat = fbo->depthAttach.get()->fglFbFormat;
+		surf.depth       = fbo->depthAttach.get()->surface;
+		surf.depthFormat = fbo->depthAttach.get()->fglFbFormat;
 	}
 	else if(!fbo->depthAttach.isAttached() &&  fbo->stencilAttach.isAttached()) {
-		curr.depth       = fbo->stencilAttach.get()->surface;
-		curr.depthFormat = fbo->stencilAttach.get()->fglFbFormat;
+		surf.depth       = fbo->stencilAttach.get()->surface;
+		surf.depthFormat = fbo->stencilAttach.get()->fglFbFormat;
 	}
 	else {
-		curr.depth = 0;
-		curr.depthFormat = 0;
+		surf.depth = 0;
+		surf.depthFormat = 0;
 	}
 
 	if (fbo->colorAttach.isAttached()) {
-		curr.color  = fbo->colorAttach.get()->surface;
-		curr.format = fbo->colorAttach.get()->fglFbFormat;
+		surf.draw  = fbo->colorAttach.get()->surface;
+		surf.format = fbo->colorAttach.get()->fglFbFormat;
 	}
 	else {
-		curr.color  = 0;
-		curr.format = 0;
+		surf.draw  = 0;
+		surf.format = 0;
 	}
 
-	curr.stride = fw;
-	curr.width  = fw;
-	curr.height = fh;
+	surf.stride = fw;
+	surf.width  = fw;
+	surf.height = fh;
 
 	glFinish();
 
