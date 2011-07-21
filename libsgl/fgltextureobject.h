@@ -39,6 +39,7 @@ struct FGLTexture : public FGLAttachable {
 	GLenum		tWrap;
 	GLboolean	genMipmap;
 	GLboolean	useMipmap;
+	GLboolean	redoMipmap;
 	GLint		cropRect[4];
 	void*		eglImage;
 	/* HW state */
@@ -52,7 +53,7 @@ struct FGLTexture : public FGLAttachable {
 		compressed(0), levels(0), maxLevel(0), format(GL_RGB),
 		type(GL_UNSIGNED_BYTE), minFilter(GL_NEAREST_MIPMAP_LINEAR),
 		magFilter(GL_LINEAR), sWrap(GL_REPEAT), tWrap(GL_REPEAT),
-		genMipmap(0), useMipmap(GL_TRUE), eglImage(0),
+		genMipmap(0), useMipmap(GL_TRUE), redoMipmap(0), eglImage(0),
 		fimg(NULL), valid(false), dirty(false)
 	{
 		fimg = fimgCreateTexture();
@@ -83,8 +84,15 @@ struct FGLTexture : public FGLAttachable {
 		return levels == ((1 << (maxLevel + 1)) - 1);
 	}
 
+	inline void texelsChanged()
+	{
+		redoMipmap = genMipmap || redoMipmap;
+	}
+
 	void updateAttachable();
 };
+
+void fglGenerateMipmaps(FGLTexture *obj);
 
 typedef FGLObject<FGLTexture> FGLTextureObject;
 typedef FGLObjectBinding<FGLTexture> FGLTextureObjectBinding;

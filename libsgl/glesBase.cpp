@@ -689,6 +689,7 @@ static inline void fglSetupTextures(FGLContext *ctx)
 	do {
 		bool enabled = ctx->texture[i].enabled;
 		FGLTexture *tex = ctx->texture[i].getTexture();
+		if(tex->redoMipmap) fglGenerateMipmaps(tex);
 
 		if(enabled && tex->surface && tex->isComplete()) {
 			/* Texture is ready */

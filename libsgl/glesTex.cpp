@@ -184,7 +184,7 @@ static int fglGetFormatInfo(GLenum format, GLenum type,
 
 static void fglGenerateMipmapsSW(FGLTexture *obj)
 {
- //FUNCTION_TRACER;
+	//FUNCTION_TRACER;
 	int level = 0;
 
 	int w = obj->width;
@@ -329,7 +329,7 @@ static void fglGenerateMipmapsSW(FGLTexture *obj)
 				+ fimgGetTexMipmapOffset(obj->fimg, level + 1);
 	}
 
-	obj->levels == ((1 << (obj->maxLevel + 1)) - 1);
+	obj->levels = ((1 << (obj->maxLevel + 1)) - 1);
 }
 
 static int fglGenerateMipmapsG2D(FGLTexture *obj, unsigned int format)
@@ -393,13 +393,15 @@ static int fglGenerateMipmapsG2D(FGLTexture *obj, unsigned int format)
 
 	close(fd);
 
-	obj->levels == ((1 << (obj->maxLevel + 1)) - 1);
+	obj->levels = ((1 << (obj->maxLevel + 1)) - 1);
 	return 0;
 }
 
-static void fglGenerateMipmaps(FGLTexture *obj)
+void fglGenerateMipmaps(FGLTexture *obj)
 {
- //FUNCTION_TRACER;
+	//FUNCTION_TRACER;
+	obj->redoMipmap = 0;
+
 	/* Handle cases supported by G2D hardware */
 	switch (obj->fglFormat) {
 	case FGTU_TSTA_TEXTURE_FORMAT_565:
@@ -775,9 +777,10 @@ GL_API void GL_APIENTRY glTexImage2D (GLenum target, GLint level,
 						ctx->unpackAlignment);
 		}
 
-		if (obj->genMipmap)
-			fglGenerateMipmaps(obj);
+		//if (obj->genMipmap)
+		//	fglGenerateMipmaps(obj);
 
+		obj->texelsChanged();
 		obj->dirty = true;
 	}
 }
@@ -904,7 +907,7 @@ GL_API void GL_APIENTRY glTexSubImage2D (GLenum target, GLint level,
 		GLint xoffset, GLint yoffset, GLsizei width, GLsizei height,
 		GLenum format, GLenum type, const GLvoid *pixels)
 {
- //FUNCTION_TRACER;
+	//FUNCTION_TRACER;
 	FGLContext *ctx = getContext();
 	FGLTexture *obj =
 		ctx->texture[ctx->activeTexture].getTexture();
@@ -1803,6 +1806,5 @@ GL_API void GL_APIENTRY glGenerateMipmapOES (GLenum target)
 
 void FGLTexture::updateAttachable()
 {
-	if (genMipmap)
-		fglGenerateMipmaps(this);
+	texelsChanged();
 }
