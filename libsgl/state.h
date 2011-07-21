@@ -175,7 +175,6 @@ struct FGLTextureState {
 struct FGLFramebufferState
 {
 	FGLSurfaceState defBuffer;
-	FGLSurfaceState curBuffer;
 	bool externalBufferInUse;
 	GLenum status;
 	FGLFramebufferObjectBinding binding;
