@@ -328,6 +328,8 @@ static void fglGenerateMipmapsSW(FGLTexture *obj)
 		nextLevel = (uint8_t *)obj->surface->vaddr
 				+ fimgGetTexMipmapOffset(obj->fimg, level + 1);
 	}
+
+	obj->levels == ((1 << (obj->maxLevel + 1)) - 1);
 }
 
 static int fglGenerateMipmapsG2D(FGLTexture *obj, unsigned int format)
@@ -390,6 +392,8 @@ static int fglGenerateMipmapsG2D(FGLTexture *obj, unsigned int format)
 	}
 
 	close(fd);
+
+	obj->levels == ((1 << (obj->maxLevel + 1)) - 1);
 	return 0;
 }
 
