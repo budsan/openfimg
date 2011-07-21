@@ -172,9 +172,26 @@ struct FGLTextureState {
 	}
 };
 
+struct FGLSurfaceData
+{
+	FGLSurface *color;
+	FGLSurface *depth;
+
+	unsigned int width;
+	unsigned int height;
+	unsigned int stride;
+	unsigned int format;
+	unsigned int depthFormat;
+
+	FGLSurfaceData()
+		: color(0), depth(0), width(0),
+		  height(0), stride(0), format(0) {};
+};
+
 struct FGLFramebufferState
 {
-	FGLSurfaceState defBuffer;
+	FGLSurfaceData defBuffer;
+	FGLSurfaceData curBuffer;
 	bool externalBufferInUse;
 	GLenum status;
 	FGLFramebufferObjectBinding binding;

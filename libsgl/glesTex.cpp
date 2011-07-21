@@ -184,7 +184,7 @@ static int fglGetFormatInfo(GLenum format, GLenum type,
 
 static void fglGenerateMipmapsSW(FGLTexture *obj)
 {
-	//FUNCTION_TRACER;
+ //FUNCTION_TRACER;
 	int level = 0;
 
 	int w = obj->width;
@@ -317,8 +317,6 @@ static void fglGenerateMipmapsSW(FGLTexture *obj)
 			return;
 		}
 
-		obj->levels |= (1 << level);
-
 		// exit condition: we just processed the 1x1 LODs
 		if ((w&h) == 1)
 		break;
@@ -395,10 +393,9 @@ static int fglGenerateMipmapsG2D(FGLTexture *obj, unsigned int format)
 	return 0;
 }
 
-void fglGenerateMipmaps(FGLTexture *obj)
+static void fglGenerateMipmaps(FGLTexture *obj)
 {
- //FUNCTION_TRACER;GL
-	obj->redoMipmap = false;
+ //FUNCTION_TRACER;
 	/* Handle cases supported by G2D hardware */
 	switch (obj->fglFormat) {
 	case FGTU_TSTA_TEXTURE_FORMAT_565:
@@ -777,7 +774,6 @@ GL_API void GL_APIENTRY glTexImage2D (GLenum target, GLint level,
 		if (obj->genMipmap)
 			fglGenerateMipmaps(obj);
 
-		//obj->redoMipmap = obj->redoMipmap || obj->genMipmap;
 		obj->dirty = true;
 	}
 }
@@ -1201,7 +1197,6 @@ GL_API void GL_APIENTRY glTexParameteri (GLenum target, GLenum pname, GLint para
 		break;
 	case GL_GENERATE_MIPMAP:
 		obj->genMipmap = param;
-		obj->redoMipmap = obj->redoMipmap || param;
 		break;
 	default:
 		setError(GL_INVALID_ENUM);
@@ -1788,7 +1783,22 @@ GL_API GLboolean GL_APIENTRY glIsTexture (GLuint texture)
 	return GL_TRUE;
 }
 
+GL_API void GL_APIENTRY glGenerateMipmapOES (GLenum target)
+{
+	if (target != GL_TEXTURE_2D) {
+		setError(GL_INVALID_ENUM);
+		return;
+	}
+
+	FGLContext *ctx = getContext();
+	FGLTexture *obj =
+		ctx->texture[ctx->activeTexture].getTexture();
+
+	fglGenerateMipmaps(obj);
+}
+
 void FGLTexture::updateAttachable()
 {
-	redoMipmap = redoMipmap || genMipmap;
+	if (genMipmap)
+		fglGenerateMipmaps(this);
 }

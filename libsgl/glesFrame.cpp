@@ -18,21 +18,18 @@ extern FGLObjectManager<FGLTexture, FGL_MAX_TEXTURE_OBJECTS> fglTextureObjects;
 inline void fglSetDefaultFramebuffer(FGLContext *ctx)
 {
 	//FUNCTION_TRACER;
+
+	memcpy(&ctx->framebuffer.curBuffer, &ctx->framebuffer.defBuffer, sizeof(FGLSurfaceData));
+
 	glFinish();
-
-	memcpy(&ctx->surface, &ctx->framebuffer.defBuffer, sizeof(FGLSurfaceState));
-
 	ctx->framebuffer.externalBufferInUse = false;
 	ctx->framebuffer.status = GL_FRAMEBUFFER_COMPLETE_OES;
 	fglSetCurrentBuffers(ctx);
 }
 
-bool fglIsFramebufferAttachmentComplete(FGLAttach *attach, unsigned mask, unsigned &w, unsigned &h)
+bool fglIsFramebufferAttachmentComplete(FGLAttach *attach, unsigned mask)
 {
-	if (!attach->isAttached()) {
-		h = w = 0;
-		return true;
-	}
+	if (!attach->isAttached()) return true;
 
 	FGLAttachable *att = attach->get();
 	if (att->width == 0 || att->height == 0) {
@@ -43,10 +40,19 @@ bool fglIsFramebufferAttachmentComplete(FGLAttach *attach, unsigned mask, unsign
 		return false;
 	}
 
-	w = att->width;
-	h = att->height;
-
 	return true;
+}
+
+void fglGetFramebufferAttachmentDimensions(FGLAttach *attach, unsigned &w, unsigned &h)
+{
+	if (attach->isAttached()) {
+		FGLAttachable *att = attach->get();
+		w = att->width;
+		h = att->height;
+	}
+	else {
+		h = w = 0;
+	}
 }
 
 void fglUpdateFramebufferStatus(FGLContext *ctx, FGLFramebuffer* fbo)
@@ -61,13 +67,18 @@ void fglUpdateFramebufferStatus(FGLContext *ctx, FGLFramebuffer* fbo)
 		{&fbo->stencilAttach, FGL_STENCIL_ATTACHABLE}
 	};
 
-	unsigned fw = 0, fh = 0;
 	for (unsigned int i = 0 ; i < 3; i++) {
-		unsigned w = 0, h = 0;
-		if (!fglIsFramebufferAttachmentComplete(atts[i].attach, atts[i].mask, w, h)) {
+		if (!fglIsFramebufferAttachmentComplete(atts[i].attach, atts[i].mask)) {
 			ctx->framebuffer.status = GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT_OES;
 			return;
 		}
+	}
+
+	unsigned fw = 0, fh = 0;
+	for (unsigned int i = 0 ; i < 3; i++)
+	{
+		unsigned w = 0, h = 0;
+		fglGetFramebufferAttachmentDimensions(atts[i].attach, w, h);
 
 		if (  w == 0 ) continue;
 		if ( fw == 0 ) {
@@ -89,9 +100,7 @@ void fglUpdateFramebufferStatus(FGLContext *ctx, FGLFramebuffer* fbo)
 		return;
 	}
 
-	glFinish();
-
-	FGLSurfaceState &curr = ctx->surface;
+	FGLSurfaceData  &curr = ctx->framebuffer.curBuffer;
 	if(fbo->depthAttach.isAttached() && fbo->stencilAttach.isAttached()) {
 		if (fbo->IsDepthStencilSameAttachment()) { //GL_DEPTH_STENCIL_OES
 			curr.depth       = fbo->depthAttach.get()->surface;
@@ -116,17 +125,19 @@ void fglUpdateFramebufferStatus(FGLContext *ctx, FGLFramebuffer* fbo)
 	}
 
 	if (fbo->colorAttach.isAttached()) {
-		curr.draw  = fbo->colorAttach.get()->surface;
+		curr.color  = fbo->colorAttach.get()->surface;
 		curr.format = fbo->colorAttach.get()->fglFbFormat;
 	}
 	else {
-		curr.draw  = 0;
+		curr.color  = 0;
 		curr.format = 0;
 	}
 
 	curr.stride = fw;
 	curr.width  = fw;
 	curr.height = fh;
+
+	glFinish();
 
 	ctx->framebuffer.externalBufferInUse = true;
 	ctx->framebuffer.status = GL_FRAMEBUFFER_COMPLETE_OES; //hurray!
@@ -780,20 +791,6 @@ GL_API void GL_APIENTRY glGetFramebufferAttachmentParameterivOES (GLenum target,
 		setError(GL_INVALID_ENUM);
 		return;
 	}
-}
-
-GL_API void GL_APIENTRY glGenerateMipmapOES (GLenum target)
-{
-	if (target != GL_TEXTURE_2D) {
-		setError(GL_INVALID_ENUM);
-		return;
-	}
-
-	FGLContext *ctx = getContext();
-	FGLTexture *obj =
-		ctx->texture[ctx->activeTexture].getTexture();
-
-	fglGenerateMipmaps(obj);
 }
 
 /*

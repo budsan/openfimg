@@ -39,7 +39,6 @@ struct FGLTexture : public FGLAttachable {
 	GLenum		tWrap;
 	GLboolean	genMipmap;
 	GLboolean	useMipmap;
-	GLboolean	redoMipmap;
 	GLint		cropRect[4];
 	void*		eglImage;
 	/* HW state */
@@ -86,8 +85,6 @@ struct FGLTexture : public FGLAttachable {
 
 	void updateAttachable();
 };
-
-void fglGenerateMipmaps(FGLTexture *obj);
 
 typedef FGLObject<FGLTexture> FGLTextureObject;
 typedef FGLObjectBinding<FGLTexture> FGLTextureObjectBinding;
