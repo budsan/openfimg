@@ -428,13 +428,14 @@ static size_t fglCalculateMipmaps(FGLTexture *obj, unsigned int width,
 	size_t offset, size;
 	unsigned int lvl, check;
 
-	size = width * height * bpp;
+	//size = width * height * bpp;
 	offset = 0;
 	check = max(width, height);
 	lvl = 0;
 
 	do {
 		fimgSetTexMipmapOffset(obj->fimg, lvl, offset);
+		size = width * height * bpp;
 		offset += size;
 
 		if(lvl == FGL_MAX_MIPMAP_LEVEL)
@@ -446,15 +447,9 @@ static size_t fglCalculateMipmaps(FGLTexture *obj, unsigned int width,
 
 		++lvl;
 
-		if (width >= 2) {
-			size /= 2;
-			width /= 2;
-		}
+		if (width  >= 2) width  /= 2;
+		if (height >= 2) height /= 2;
 
-		if (height >= 2) {
-			size /= 2;
-			height /= 2;
-		}
 	} while (1);
 
 	obj->maxLevel = lvl;

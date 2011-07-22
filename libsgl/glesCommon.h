@@ -128,8 +128,13 @@ struct FGLColorConfigDesc {
 	GLenum readType;
 	GLenum readFormat;
 	GLint pixelSize;
+	uint8_t redPos;
+	uint8_t greenPos;
+	uint8_t bluePos;
+	uint8_t alphaPos;
 };
 
 extern const FGLColorConfigDesc fglColorConfigs[];
+extern const FGLColorConfigDesc *fglGetColorConfigDesc(unsigned int format);
 extern void fglCleanTextureObjects(FGLContext *ctx);
 #endif
