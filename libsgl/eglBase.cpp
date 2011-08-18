@@ -2111,6 +2111,11 @@ EGLAPI EGLBoolean EGLAPIENTRY eglMakeCurrent(EGLDisplay dpy, EGLSurface draw,
 	if (draw) {
 		FGLRenderSurface *s = (FGLRenderSurface *)draw;
 
+		if (s->isTerminated()) {
+			setError(EGL_BAD_SURFACE);
+			return EGL_FALSE;
+		}
+
 		if (!s->isValid()) {
 			setError(EGL_BAD_SURFACE);
 			return EGL_FALSE;
@@ -2124,6 +2129,11 @@ EGLAPI EGLBoolean EGLAPIENTRY eglMakeCurrent(EGLDisplay dpy, EGLSurface draw,
 
 	if (read && read!=draw) {
 		FGLRenderSurface *s = (FGLRenderSurface *)read;
+
+		if (s->isTerminated()) {
+			setError(EGL_BAD_SURFACE);
+			return EGL_FALSE;
+		}
 
 		if (!s->isValid()) {
 			setError(EGL_BAD_SURFACE);
