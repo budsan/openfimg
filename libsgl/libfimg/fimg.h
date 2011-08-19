@@ -394,6 +394,7 @@ void fimgCompatSetEnvColor(fimgContext *ctx, unsigned unit,
 					float r, float g, float b, float a);
 void fimgCompatSetupTexture(fimgContext *ctx, fimgTexture *tex,
 						uint32_t unit, int swap);
+void fimgCompatSetFrameBufParams(fimgContext *ctx, int swapAlpha);
 
 #endif
 

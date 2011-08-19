@@ -801,6 +801,7 @@ void fglSetCurrentBuffers(FGLContext *ctx)
 	if (surf.draw) {
 		fimgSetFrameBufSize(ctx->fimg, surf.stride, surf.height);
 		fimgSetFrameBufParams(ctx->fimg, 1, 0, 255, (fimgColorMode)surf.format);
+		fimgCompatSetFrameBufParams(ctx->fimg, surf.swapAlpha);
 		fimgSetColorBufBaseAddr(ctx->fimg, surf.draw->paddr);
 		fimgSetColorBufWriteMask(ctx->fimg,
 			mask.red, mask.green, mask.green, mask.alpha);

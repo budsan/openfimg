@@ -29,6 +29,7 @@ public:
 	uint32_t     fglFbFormat;
 	uint32_t     bpp;
 	bool         swap;
+	bool         swapAlpha;
 
 	FGLAttachable();
 	virtual ~FGLAttachable();

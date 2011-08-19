@@ -151,8 +151,9 @@ struct FGLSurfaceState {
 	GLint height;
 	unsigned int format;
 	unsigned int depthFormat;
+	bool swapAlpha;
 
-	FGLSurfaceState() : draw(0), read(0), depth(0) {};
+	FGLSurfaceState() : draw(0), read(0), depth(0), swapAlpha(false) {};
 };
 
 struct FGLTextureState {

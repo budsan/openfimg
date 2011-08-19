@@ -435,6 +435,7 @@ typedef struct {
 	unsigned int depthAddr;
 	unsigned int colorAddr;
 	unsigned int bufWidth;
+	int swapAlpha; //RGBA false, ARGB true
 } fimgFragmentContext;
 
 void fimgCreateFragmentContext(fimgContext *ctx);

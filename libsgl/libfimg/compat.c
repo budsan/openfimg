@@ -540,6 +540,17 @@ void fimgCompatSetupTexture(fimgContext *ctx, fimgTexture *tex,
 	ctx->compat.texture[unit].swap = swap;
 }
 
+/*****************************************************************************
+* FUNCTIONS:	fimgCompatSetFrameBufParams
+* SYNOPSIS:	specifies the value used for frame buffer control.
+* PARAMETERS:	[IN] swapAlpha - specifies if fragment is stored as RGBA (false)
+*		     or ARGB (true)
+*****************************************************************************/
+void fimgCompatSetFrameBufParams(fimgContext *ctx, int swapAlpha)
+{
+	ctx->fragment.swapAlpha = swapAlpha;
+}
+
 void fimgCreateCompatContext(fimgContext *ctx)
 {
 	uint32_t unit;
@@ -578,6 +589,8 @@ void fimgCreateCompatContext(fimgContext *ctx)
 	ctx->compat.psDirty = 1;
 
 	ctx->clear.depth = 1.0;
+
+	ctx->fragment.swapAlpha = 0;
 }
 
 #define FGFP_TEXENV(unit)	(4 + 2*(unit))
@@ -681,6 +694,8 @@ void fimgCompatFlush(fimgContext *ctx)
 
 		ctx->compat.texture[i].dirty = 0;
 	}
+
+	setPSConstBool(ctx, ctx->fragment.swapAlpha, 2);
 
 	setPixelShaderState(ctx, 1);
 }
