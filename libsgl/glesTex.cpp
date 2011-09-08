@@ -144,6 +144,8 @@ static int fglGetFormatInfo(GLenum format, GLenum type,
 			return FGTU_TSTA_TEXTURE_FORMAT_8888;
 		case GL_RGBA: // Needs swapping in pixel shader
 			*swap = 1;
+		/* Fall through */
+		case GL_BGRA_EXT:
 			*bpp = 4;
 			*attachMask = FGL_COLOR0_ATTACHABLE;
 			*fbFormat   = FGPF_COLOR_MODE_8888;
